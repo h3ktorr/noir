@@ -2,7 +2,14 @@ import Image from "next/image"
 
 const Navbar = () => {
   return (
-    <div className="flex items-center justify-between h-24 w-[calc(100vw-6rem)] border-b border-foreground p-8">
+    <div className="fixed top-0 left-24
+      h-14
+      w-[calc(100vw-6rem)]
+      flex items-center justify-between
+      border-b border-foreground
+      px-8
+      bg-background
+      z-40">
       <Image 
         src="/light-logo.svg"
         alt="Logo"

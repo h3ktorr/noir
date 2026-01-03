@@ -2,13 +2,24 @@ import { House, Mail, Bell, User, SquarePen } from "lucide-react";
 
 const Sidebar = () => {
   return (
-    <div className="flex flex-col border-r border-foreground w-24 h-screen text-foreground gap-12 items-center justify-center">
-      <House width={45} height={45} fill="currentColor" stroke="none" />
-      <Mail width={45} height={45} />
-      <Bell width={45} height={45} />
-      <User width={45} height={45} />
-      <SquarePen width={45} height={45} />
-    </div>
+    <aside className="
+      fixed left-0 top-0
+      w-24 h-screen
+      flex flex-col
+      items-center justify-center
+      gap-12
+      border-r border-foreground
+      text-foreground
+      bg-background
+      shrink-0
+      z-50
+    ">
+      <House size={45} fill="currentColor" stroke="none" />
+      <Mail size={45} />
+      <Bell size={45} />
+      <User size={45} />
+      <SquarePen size={45} />
+    </aside>
   )
 }
 
