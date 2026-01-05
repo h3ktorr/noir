@@ -11,7 +11,7 @@ import Profile4 from "./profile-4.jpg";
 import Profile5 from "./profile-5.jpg";
 import Profile6 from "./profile-6.jpg";
 
-export const profiles = [
+export const stories = [
   {
     id: 1,
     name: "Julian Parker",
@@ -47,5 +47,45 @@ export const profiles = [
     name: "Amani Rivers",
     image: Profile6,
     story: Story6,
+  },
+];
+
+export const feeds = [
+  {
+    id: 13,
+    name: "Julian Parker",
+    userImage: Profile1,
+    feedImage: Story1,
+    caption:
+      "Lost in the beauty of nature 🏔️ The mountains are calling and I must go!",
+    likes: 445,
+    createdAt: "2 hrs ago",
+  },
+  {
+    id: 22,
+    name: "Zara Mitchell",
+    userImage: Profile5,
+    feedImage: Story4,
+    caption: "Sunday brunch done right 🥞✨ Recipe coming soon!",
+    likes: 505,
+    createdAt: "3 hrs ago",
+  },
+  {
+    id: 33,
+    name: "Noah Alvarez",
+    userImage: Profile3,
+    feedImage: Story2,
+    caption: "New season, new style 👗 Who else is excited for fall fashion?",
+    likes: 675,
+    createdAt: "4 days ago",
+  },
+  {
+    id: 44,
+    name: "Lina Moreau",
+    userImage: Profile2,
+    feedImage: Story6,
+    caption: "City lights and architectural wonders 🌆 Never gets old!",
+    likes: 958,
+    createdAt: "1 week ago",
   },
 ];
