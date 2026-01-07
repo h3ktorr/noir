@@ -3,6 +3,7 @@ import "./globals.css";
 import Sidebar from "@/components/Sidebar";
 import Navbar from "@/components/Navbar";
 import { Nunito } from "next/font/google";
+import Footer from "@/components/Footer";
 
 const nunito = Nunito({
   subsets: ["latin"],
@@ -25,8 +26,9 @@ export default function RootLayout({
       <body className="flex">
         <Sidebar />
         <Navbar />
-        <main className="ml-24 pt-14 min-h-screen overflow-y-auto">
+        <main className="ml-24 pt-14 min-h-screen overflow-y-auto w-full">
           {children}
+          <Footer />
         </main>
       </body>
     </html>

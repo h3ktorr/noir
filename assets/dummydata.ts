@@ -89,3 +89,34 @@ export const feeds = [
     createdAt: "1 week ago",
   },
 ];
+
+export const allMessages = [
+  {
+    id: 11,
+    name: "Julian Parker",
+    image: Profile1,
+    message: "Hey! Are we still on for tomorrow?",
+    createdAt: "2:30 PM",
+  },
+  {
+    id: 21,
+    name: "Lina Moreau",
+    image: Profile4,
+    message: "Can you send me the files?",
+    createdAt: "7:01 AM",
+  },
+  {
+    id: 31,
+    name: "Noah Alvarez",
+    image: Profile3,
+    message: "Hello! Just wanted to check in.",
+    createdAt: "1:04 PM",
+  },
+  {
+    id: 41,
+    name: "Zara Mitchell",
+    image: Profile5,
+    message: "Hi, How are you?",
+    createdAt: "3:55 AM",
+  },
+];

@@ -1,4 +1,5 @@
 import { House, Mail, Bell, User, SquarePen } from "lucide-react";
+import Link from "next/link";
 
 const Sidebar = () => {
   return (
@@ -14,10 +15,10 @@ const Sidebar = () => {
       shrink-0
       z-50
     ">
-      <House size={45} fill="currentColor" stroke="none" />
-      <Mail size={45} />
-      <Bell size={45} />
-      <User size={45} />
+      <Link href="/"><House size={45} fill="currentColor" stroke="none" /></Link>
+      <Link href="/messages"><Mail size={45} /></Link>
+      <Link href="/notifications"><Bell size={45} /></Link>
+      <Link href="/profile"><User size={45} /></Link>
       <SquarePen size={45} />
     </aside>
   )
