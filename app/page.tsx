@@ -1,5 +1,5 @@
 import Feed from "@/components/Feed";
-import Navbar from "@/components/Navbar";
+import Footer from "@/components/Footer";
 import Stories from "@/components/Stories";
 
 export default function Home() {
@@ -7,6 +7,7 @@ export default function Home() {
     <div className="">
       <Stories />
       <Feed />
+      <Footer />
     </div>
   );
 }

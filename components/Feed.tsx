@@ -6,7 +6,7 @@ const Feed = () => {
   return (
     <div className="w-full flex flex-col gap-4">
       {feeds.map(feed=>(
-        <div key={feed.id} className="border-b w-full p-12 flex">
+        <div key={feed.id} className="border-b last:border-b-0 w-full p-12 flex">
           <Image 
                 src={feed.userImage}
                 alt={feed.name}
