@@ -120,3 +120,27 @@ export const allMessages = [
     createdAt: "3:55 AM",
   },
 ];
+
+export const notifications = [
+  {
+    id: 17,
+    username: "Amani_rivers",
+    image: Profile1,
+    text: "liked your photo.",
+    createdAt: "2 hrs ago",
+  },
+  {
+    id: 27,
+    username: "Ethan_cole",
+    image: Profile2,
+    text: "commented: Awesome shot!",
+    createdAt: "3 hrs ago",
+  },
+  {
+    id: 37,
+    username: "Noah_alvarez",
+    image: Profile3,
+    text: "started following you.",
+    createdAt: "5 hrs ago",
+  },
+];

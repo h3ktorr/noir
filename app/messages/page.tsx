@@ -3,7 +3,7 @@ import SingleMessage from "@/components/SingleMessage"
 
 const page = () => {
   return (
-    <div className="w-full flex h-screen">
+    <div className="w-full flex h-screen overflow-hidden">
       <AllMessages />
       <SingleMessage />
     </div>
