@@ -144,3 +144,18 @@ export const notifications = [
     createdAt: "5 hrs ago",
   },
 ];
+
+export const user = {
+  id: 17,
+  username: "Amani_rivers",
+  displayName: "Amani Rivers",
+  image: Profile6,
+  coverImage: Story3,
+  bio: "Photographer & Traveler",
+  location: "New York, USA",
+  createdAt: new Date("2021-05-15"),
+  _count: {
+    followers: 1200,
+    following: 300,
+  },
+};

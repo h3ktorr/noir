@@ -23,11 +23,13 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className={nunito.variable}>
-      <body className="flex">
+      <body className="flex h-screen">
         <Sidebar />
         <Navbar />
-        <main className="ml-24 pt-14 min-h-screen overflow-y-auto w-full">
-          {children}
+        <main className="ml-24 pt-14 w-full flex flex-col min-h-screen">
+          <div className="grow">
+            {children}
+          </div>
           <Footer />
         </main>
       </body>
