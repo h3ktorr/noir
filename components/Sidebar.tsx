@@ -1,7 +1,12 @@
+'use client'
+
+import { AppContext } from "@/context/AppContext";
+import { useContext } from "react";
 import { House, Mail, Bell, User, SquarePen } from "lucide-react";
 import Link from "next/link";
 
 const Sidebar = () => {
+  const { openCreatePost } = useContext(AppContext)!;
   return (
     <aside className="
       fixed left-0 top-0
@@ -19,7 +24,7 @@ const Sidebar = () => {
       <Link href="/messages"><Mail size={45} /></Link>
       <Link href="/notifications"><Bell size={45} /></Link>
       <Link href="/profile"><User size={45} /></Link>
-      <SquarePen size={45} />
+      <SquarePen size={45} onClick={openCreatePost} />
     </aside>
   )
 }

@@ -4,6 +4,8 @@ import Sidebar from "@/components/Sidebar";
 import Navbar from "@/components/Navbar";
 import { Nunito } from "next/font/google";
 import Footer from "@/components/Footer";
+import CreatePost from "@/components/CreatePost";
+import AppContextProvider from "@/context/AppContext";
 
 const nunito = Nunito({
   subsets: ["latin"],
@@ -23,16 +25,19 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className={nunito.variable}>
-      <body className="flex h-screen">
-        <Sidebar />
-        <Navbar />
-        <main className="ml-24 pt-14 w-full flex flex-col min-h-screen">
-          <div className="grow">
-            {children}
-          </div>
-          <Footer />
-        </main>
-      </body>
+      <AppContextProvider>
+        <body className="flex h-screen">
+          <Sidebar />
+          <Navbar />
+          <main className="ml-24 pt-14 w-full flex flex-col min-h-screen">
+            <div className="grow">
+              {children}
+            </div>
+            <Footer />
+          </main>
+          <CreatePost />
+        </body>
+      </AppContextProvider>
     </html>
   );
 }
