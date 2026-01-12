@@ -15,7 +15,7 @@ type AppContextProviderProps = {
 };
 
 const AppContextProvider: React.FC<AppContextProviderProps> = ({ children }) => {
- const [isCreatePostOpen, setIsCreatePostOpen] = useState(true);
+ const [isCreatePostOpen, setIsCreatePostOpen] = useState(false);
 
   const openCreatePost = () => {
   setIsCreatePostOpen(true)
