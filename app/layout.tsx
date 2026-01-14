@@ -29,7 +29,7 @@ export default function RootLayout({
         <body className="flex h-screen">
           <Sidebar />
           <Navbar />
-          <main className="ml-24 pt-14 w-full flex flex-col min-h-screen">
+          <main className="ml-24 pt-14 w-full flex flex-col min-h-screen overflow-x-hidden">
             <div className="grow">
               {children}
             </div>
