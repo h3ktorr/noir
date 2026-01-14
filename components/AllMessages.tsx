@@ -1,5 +1,5 @@
 import { allMessages } from "@/assets/dummydata"
-import Image from "next/image"
+import ImageComp from "./ImageComp"
 
 const AllMessages = () => {
   return (
@@ -22,10 +22,12 @@ const AllMessages = () => {
             key={message.id}
             className="flex items-center mb-4 p-2 hover:bg-foreground/5 rounded-lg cursor-pointer"
           >
-            <Image
+            <ImageComp
               src={message.image}
               alt={message.name}
-              className="w-12 h-12 rounded-full mr-4"
+              w={48}
+              h={48}
+              className="rounded-full mr-4"
             />
             <div className="flex-1">
               <h2 className="font-semibold">{message.name}</h2>

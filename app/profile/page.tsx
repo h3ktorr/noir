@@ -1,7 +1,7 @@
 import { user } from "@/assets/dummydata"
 import Feed from "@/components/Feed"
-import Image from "next/image"
 import { MapPin, CalendarDays } from "lucide-react";
+import ImageComp from "@/components/ImageComp";
 
 const page = () => {
   return (
@@ -12,23 +12,25 @@ const page = () => {
 
           {/* COVER */}
           <div className="relative w-full aspect-3/1 bg-gray-300">
-            <Image
+            <ImageComp
               src={user.coverImage}
               alt="Cover"
-              fill
+              tr={true}
+              w={1200}
+              h={400}
               className="object-cover"
-              priority
             />
           </div>
 
           {/* AVATAR */}
-          <div className="absolute left-6 -bottom-16 rounded-full overflow-hidden">
-            <div className="w-32 h-32 border-4 border-background bg-gray-300">
-              <Image
+          <div className="absolute left-6 -bottom-16 overflow-hidden w-32 h-32  rounded-full bg-gray-300">
+            <div className="">
+              <ImageComp
                 src={user.image}
                 alt="Avatar"
-                fill
-                className="object-cover"
+                w={128}
+                h={128}
+                className="object-cover rounded-full"
               />
             </div>
           </div>

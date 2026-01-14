@@ -1,8 +1,9 @@
 import { stories } from "@/assets/dummydata"
-import Image from "next/image"
 import { Plus } from "lucide-react";
+import ImageComp from "./ImageComp";
 
 const Stories = () => {
+  const imageKitURL= process.env.NEXT_PUBLIC_URL_ENDPOINT
   return (
     <div className="flex gap-4 overflow-x-auto overflow-y-hidden p-4 no-scrollbar text-2xl border-b pb-6">
      <div className="min-w-52 h-64 shrink-0 rounded-2xl border">
@@ -13,17 +14,17 @@ const Stories = () => {
         <div
           key={profile.id}
           style={{
-            backgroundImage: `url(${profile.story.src})`,
+            backgroundImage: `url(${imageKitURL}/${profile.story})`,
           }}
           className="min-w-52 h-64 shrink-0 rounded-2xl p-1 flex flex-col justify-between shadow-md bg-cover bg-center relative"
         >
          <div className="absolute inset-0 rounded-2xl bg-linear-to-t from-black/70 via-black/30 to-transparent" />
          <div className="relative p-5 flex flex-col justify-between h-full text-white"> 
-          <Image
+          <ImageComp
            src={profile.image}
            alt="profile-pix"
-           width={70}
-           height={70}
+           w={70}
+           h={70}
            className="rounded-full"
           />
           <p className="">{profile.name}</p>

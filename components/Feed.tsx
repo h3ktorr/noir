@@ -1,17 +1,17 @@
 import { feeds } from "@/assets/dummydata"
-import Image from "next/image"
 import { Ellipsis, MessageCircle, Repeat2, Heart, Bookmark } from "lucide-react";
+import ImageComp from "./ImageComp";
 
 const Feed = () => {
   return (
-    <div className="w-full flex flex-col gap-4">
+    <div className="flex flex-col gap-4">
       {feeds.map(feed=>(
         <div key={feed.id} className="border-b last:border-b-0 w-full p-12 flex">
-          <Image 
+          <ImageComp   
                 src={feed.userImage}
                 alt={feed.name}
-                width={70}
-                height={70}
+                w={70}
+                h={70}
                 className="rounded-full h-fit"
               />
           <div className="">
@@ -24,13 +24,13 @@ const Feed = () => {
             <Ellipsis size={20} className="text-foreground" />
           </div>
           {/* FEED BODY*/}
-          <div className="ml-8 pt-6 flex flex-col gap-4">
+          <div className="ml-8 pt-6 flex flex-col gap-4 w-full">
             <p className="">{feed.caption}</p>
-            <Image 
+            <ImageComp
               src={feed.feedImage}
               alt={feed.name}
-              width={200}
-              height={200}
+              w={600}
+              h={400}
               className="rounded-2xl w-fit h-fit"
             />
           </div>

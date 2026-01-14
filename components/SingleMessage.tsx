@@ -1,5 +1,3 @@
-import Image from "next/image"
-import Profile1 from "../assets/profile-1.jpg";
 import { Phone, Video, EllipsisVertical, Send } from "lucide-react";
 import ImageComp from "./ImageComp";
 
@@ -10,7 +8,7 @@ const SingleMessage = () => {
       <div className="flex items-center justify-between p-4 border-b border-foreground">
         <div className="flex items-center">
           <ImageComp 
-            src="general/profile-1.jpg"
+            src="assets/profile-1.jpg"
             alt=""
             w={48}
             h={48}

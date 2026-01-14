@@ -3,8 +3,7 @@
 import { AppContext } from "@/context/AppContext";
 import { useContext, useEffect, useRef } from "react";
 import { X, Image as LumineImage, Smile, CalendarClock, MapPin  } from "lucide-react";
-import Profile3 from "../assets/profile-3.jpg";
-import Image from "next/image";
+import ImageComp from "./ImageComp";
 
 const CreatePost = () => {
   const { isCreatePostOpen, closeCreatePost} = useContext(AppContext)!;
@@ -35,7 +34,7 @@ const CreatePost = () => {
           <X size={20} onClick={closeCreatePost}/>
         </div>
         <div className="flex p-4  gap-6">
-          <Image src={Profile3} alt="profile" className="w-12 h-12 rounded-full mb-4"/>
+          <ImageComp src="assets/profile-3.jpg" alt="profile" w={48} h={48} className="w-12 h-12 rounded-full mb-4"/>
           <div className="w-full flex flex-col">
             <textarea rows={5} className="w-full p-2 rounded-lg text-background border border-background resize-none" placeholder="What's on your mind?"></textarea>
             <div className="mt-4 flex justify-between items-center">

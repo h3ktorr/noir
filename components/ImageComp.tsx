@@ -18,8 +18,9 @@ export default function Page({src, alt, w, h, className, tr}: ImageType) {
         src={src}
         alt={alt}
         className={className}
-        {... (tr ? { transformation: [{ height: h, width: w}] } : { width: w, height: h })}
-
+        width={w}
+        height={h}
+        {... (tr && { transformation: [{ height: h, width: w}] })}
       />
     </ImageKitProvider>
   )

@@ -1,5 +1,5 @@
 import { notifications } from "@/assets/dummydata"
-import Image from "next/image"
+import ImageComp from "@/components/ImageComp"
 
 const page = () => {
   return (
@@ -14,7 +14,12 @@ const page = () => {
           notifications.map((notification) => (
             <div className=" p-4" key={notification.id}>
               <div className="flex items-center space-x-3">
-                <Image src={notification.image} alt={notification.username} className="w-10 h-10 rounded-full" />
+                <ImageComp 
+                src={notification.image} 
+                alt={notification.username} 
+                w={40}
+                h={40}
+                className="rounded-full" />
                 <div>
                   <p className="font-semibold">{notification.username} <span className="text-sm text-gray-400 ml-2">{notification.text}</span></p>
                   
