@@ -7,7 +7,7 @@ export async function GET() {
   // If the user is not authenticated, you can return an error response
 
   const { token, expire, signature } = getUploadAuthParams({
-    privateKey: process.env.PRIVATE_KEY as string, // Never expose this on client side
+    privateKey: process.env.PRIVATE_KEY as string,
     publicKey: process.env.NEXT_PUBLIC_PUBLIC_KEY as string,
     // expire: 30 * 60, // Optional, controls the expiry time of the token in seconds, maximum 1 hour in the future
     // token: "random-token", // Optional, a unique token for request
