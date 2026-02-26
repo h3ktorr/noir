@@ -41,9 +41,6 @@ export const createPostAction = async(data: FormData) => {
     return;
   }
 
-  const bytes = await file.arrayBuffer();
-  const buffer = Buffer.from(bytes)
-
   let authParams;
   try {
     authParams = await authenticator();
@@ -61,9 +58,12 @@ const { signature, expire, token, publicKey } = authParams;
       signature,
       publicKey,
       file,
-      fileName: file.name, // Optionally set a custom file name
-      // Abort signal to allow cancellation of the upload if needed.
+      fileName: file.name, 
+      folder: "/posts",
       abortSignal: abortController.signal,
+      transformation: {
+        pre: "w-600",
+      }
     });
       console.log("Upload response:", uploadResponse);
   } catch (error) {
