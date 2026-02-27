@@ -4,7 +4,7 @@ import { AppContext } from "@/context/AppContext";
 import { useContext, useEffect, useRef, useState } from "react";
 import { X, Image as LumineImage, Smile, CalendarClock, MapPin  } from "lucide-react";
 import ImageComp from "./ImageComp";
-import { createPostAction } from "@/actions";
+import { createPostAction } from "@/actions/createPost";
 import Image from "next/image";
 
 const CreatePost = () => {
@@ -24,6 +24,9 @@ const CreatePost = () => {
       setMedia(e.target.files[0]);
     }
   };
+
+  console.log(media);
+  
 
   const previewUrl = media ? URL.createObjectURL(media) : null;
 
@@ -50,13 +53,19 @@ const CreatePost = () => {
           <div className="w-full flex flex-col">
             <textarea rows={5} name="desc" className="w-full p-2 rounded-lg text-background border border-background resize-none" placeholder="What's on your mind?"></textarea>
             {
-              previewUrl && <div className="relative rounded overflow-hidden mt-4 w-40 h-40">
+              media?.type.includes("image") && previewUrl && <div className="relative rounded overflow-hidden mt-4 w-40 h-40">
                 <Image 
                   src={previewUrl}
                   alt=""
                   fill
                   className="object-cover"
                 />
+                <X size={18} onClick={() => setMedia(null)} className="absolute top-1 right-1 cursor-pointer bg-black/50 rounded-full p-1 text-white"/>
+              </div>
+            }
+            {
+              media?.type.includes("video") && previewUrl && <div className="w-40 h-40 relative rounded overflow-hidden mt-4">
+                <video src={previewUrl} controls className=" object-cover"/>
                 <X size={18} onClick={() => setMedia(null)} className="absolute top-1 right-1 cursor-pointer bg-black/50 rounded-full p-1 text-white"/>
               </div>
             }

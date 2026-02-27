@@ -1,8 +1,13 @@
 import { feeds } from "@/assets/dummydata"
 import { Ellipsis, MessageCircle, Repeat2, Heart, Bookmark } from "lucide-react";
 import ImageComp from "./ImageComp";
+import { getFileDetails } from "@/actions/getFileDetails";
 
-const Feed = () => {
+const Feed = async () => {
+  const fileDetails = await getFileDetails('69a185235c7cd75eb87f9775');
+
+  console.log(fileDetails);
+
   return (
     <div className="flex flex-col gap-4">
       {feeds.map(feed=>(
