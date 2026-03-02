@@ -43,6 +43,8 @@ export const feeds = [
     name: "Julian Parker",
     userImage: "assets/profile-1.jpg",
     feedImage: "assets/story-1.jpg",
+
+    fileId: "69a581075c7cd75eb8e99a79",
     caption:
       "Lost in the beauty of nature 🏔️ The mountains are calling and I must go!",
     likes: 445,
@@ -53,6 +55,7 @@ export const feeds = [
     name: "Zara Mitchell",
     userImage: "assets/profile-5.jpg",
     feedImage: "assets/story-4.jpg",
+    fileId: "69a581075c7cd75eb8e998bf",
     caption: "Sunday brunch done right 🥞✨ Recipe coming soon!",
     likes: 505,
     createdAt: "3 hrs ago",
@@ -62,6 +65,7 @@ export const feeds = [
     name: "Noah Alvarez",
     userImage: "assets/profile-3.jpg",
     feedImage: "assets/story-2.jpg",
+    fileId: "69a581075c7cd75eb8e999be",
     caption: "New season, new style 👗 Who else is excited for fall fashion?",
     likes: 675,
     createdAt: "4 days ago",
@@ -71,6 +75,7 @@ export const feeds = [
     name: "Lina Moreau",
     userImage: "assets/profile-2.jpg",
     feedImage: "assets/story-6.jpg",
+    fileId: "69a57d225c7cd75eb8ce9ca8",
     caption: "City lights and architectural wonders 🌆 Never gets old!",
     likes: 958,
     createdAt: "1 week ago",

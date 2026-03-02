@@ -64,7 +64,7 @@ const CreatePost = () => {
               </div>
             }
             {
-              media?.type.includes("video") && previewUrl && <div className="w-40 h-40 relative rounded overflow-hidden mt-4">
+              media?.type.includes("video") && previewUrl && <div className="w-40 h-fit relative rounded overflow-hidden mt-4">
                 <video src={previewUrl} controls className=" object-cover"/>
                 <X size={18} onClick={() => setMedia(null)} className="absolute top-1 right-1 cursor-pointer bg-black/50 rounded-full p-1 text-white"/>
               </div>
