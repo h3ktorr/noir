@@ -2,17 +2,18 @@ import { feeds } from "@/assets/dummydata"
 import { Ellipsis, MessageCircle, Repeat2, Heart, Bookmark } from "lucide-react";
 import ImageComp from "./ImageComp";
 import { getFileDetails } from "@/actions/getFileDetails";
+import VideoComp from "./VideoComp";
 
 const Feed = async () => {
   const feedsWithImages = await Promise.all(
     feeds.map(async (feed) => {
       const details = feed.fileId
         ? await getFileDetails(feed.fileId)
-        : null;
+        : null;        
 
       return {
         ...feed,
-        resolvedImage: details?.url || feed.feedImage // Use resolved URL or fallback
+        fileDetails: details
       };
     })
   );
@@ -24,7 +25,7 @@ const Feed = async () => {
         return (
           <div key={feed.id} className="border-b last:border-b-0 w-full p-12 flex">
             <ImageComp   
-                  src={feed.resolvedImage}
+                  src={feed.feedImage}
                   alt={feed.name}
                   w={70}
                   h={70}
@@ -42,13 +43,17 @@ const Feed = async () => {
             {/* FEED BODY*/}
             <div className="ml-8 pt-6 flex flex-col gap-4 w-full">
               <p className="">{feed.caption}</p>
-              <ImageComp
-                src={feed.feedImage}
+              {feed.fileDetails?.fileType === "image" && <ImageComp
+                src={feed.fileDetails?.url}
                 alt={feed.name}
-                w={600}
-                h={400}
+                w={feed.fileDetails?.width}
+                h={feed.fileDetails?.height}
                 className="rounded-2xl w-fit h-fit"
-              />
+              />}
+              {feed.fileDetails?.fileType === "non-image" && <VideoComp
+                src={feed.fileDetails?.url}
+                className="rounded-2xl w-fit h-fit"
+              />}
             </div>
             {/* FEED FOOTER*/}
             <div className="flex ml-8 pt-8 gap-16">

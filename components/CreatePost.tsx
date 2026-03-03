@@ -23,10 +23,7 @@ const CreatePost = () => {
     if (e.target.files && e.target.files[0]) {
       setMedia(e.target.files[0]);
     }
-  };
-
-  console.log(media);
-  
+  };  
 
   const previewUrl = media ? URL.createObjectURL(media) : null;
 

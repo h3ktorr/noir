@@ -75,7 +75,7 @@ export const feeds = [
     name: "Lina Moreau",
     userImage: "assets/profile-2.jpg",
     feedImage: "assets/story-6.jpg",
-    fileId: "69a57d225c7cd75eb8ce9ca8",
+    fileId: "69a6ccf35c7cd75eb8867a12",
     caption: "City lights and architectural wonders 🌆 Never gets old!",
     likes: 958,
     createdAt: "1 week ago",
