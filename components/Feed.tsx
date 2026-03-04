@@ -23,14 +23,14 @@ const Feed = async () => {
       {feedsWithImages.map((feed) => {
         
         return (
-          <div key={feed.id} className="border-b last:border-b-0 w-full p-12 flex">
-            <ImageComp   
-                  src={feed.feedImage}
-                  alt={feed.name}
-                  w={70}
-                  h={70}
-                  className="rounded-full h-fit"
-                />
+          <div key={feed.id} className="border-b last:border-b-0 w-150 h-162.5 px-12 pt-12 pb-6 flex self-center">
+            <ImageComp
+              src={feed.feedImage}
+              alt={feed.name}
+              w={70}
+              h={70}
+              className="rounded-full h-fit"
+            />
             <div className="">
               {/* FEED HEADER*/}
             <div className="flex justify-between  w-full items-center">
@@ -48,15 +48,16 @@ const Feed = async () => {
                 alt={feed.name}
                 w={feed.fileDetails?.width}
                 h={feed.fileDetails?.height}
-                className="rounded-2xl w-fit h-fit"
+                className="rounded-2xl w-100 h-100" tr={true}
               />}
               {feed.fileDetails?.fileType === "non-image" && <VideoComp
                 src={feed.fileDetails?.url}
-                className="rounded-2xl w-fit h-fit"
+                className="rounded-2xl w-100 h-100"
+                tr={true}
               />}
             </div>
             {/* FEED FOOTER*/}
-            <div className="flex ml-8 pt-8 gap-16">
+            <div className="flex pt-8 gap-16 justify-center">
               <MessageCircle size={30} className="text-foreground" />
               <Repeat2 size={30} className="text-foreground" />
               <Heart size={30} className="text-foreground" />
