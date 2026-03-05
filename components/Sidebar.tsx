@@ -23,8 +23,10 @@ const Sidebar = () => {
       <Link href="/"><House size={45} fill="currentColor" stroke="none" /></Link>
       <Link href="/messages"><Mail size={45} /></Link>
       <Link href="/notifications"><Bell size={45} /></Link>
-      <Link href="/profile"><User size={45} /></Link>
-      <SquarePen size={45} onClick={openCreatePost} />
+      <Link href="/profile/abc"><User size={45} /></Link>
+      <button onClick={openCreatePost} aria-label="Create post" className="text-foreground">
+        <SquarePen size={45} />
+      </button>
     </aside>
   )
 }

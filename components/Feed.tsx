@@ -23,7 +23,7 @@ const Feed = async () => {
       {feedsWithImages.map((feed) => {
         
         return (
-          <div key={feed.id} className="border-b last:border-b-0 w-150 h-162.5 px-12 pt-12 pb-6 flex self-center">
+          <div key={feed.id} className="border-b last:border-b-0 w-150 h-162.5 px-12 pt-12 pb-6 flex 1xl:self-start self-center">
             <ImageComp
               src={feed.feedImage}
               alt={feed.name}
@@ -58,10 +58,10 @@ const Feed = async () => {
             </div>
             {/* FEED FOOTER*/}
             <div className="flex pt-8 gap-16 justify-center">
-              <MessageCircle size={30} className="text-foreground" />
-              <Repeat2 size={30} className="text-foreground" />
-              <Heart size={30} className="text-foreground" />
-              <Bookmark size={30} className="text-foreground" />
+              <MessageCircle size={27} className="text-foreground" />
+              <Repeat2 size={27} className="text-foreground" />
+              <Heart size={27} className="text-foreground" />
+              <Bookmark size={27} className="text-foreground" />
             </div>
             </div>
           </div>
