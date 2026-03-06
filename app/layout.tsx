@@ -32,7 +32,7 @@ export default function RootLayout({
           <Sidebar />
           <Navbar />
           <main className="ml-24 pt-14 w-full flex flex-col min-h-screen overflow-x-hidden">
-            <div className="grow">
+            <div className="grow flex flex-col">
               {children}
             </div>
             <Footer />

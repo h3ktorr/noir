@@ -150,4 +150,9 @@ export const user = {
     followers: 1200,
     following: 300,
   },
+  caption: "City lights and architectural wonders 🌆 Never gets old!",
+  name: "Noah Alvarez",
+  userImage: "assets/profile-3.jpg",
+  feedImage: "assets/story-2.jpg",
+  fileId: "69a581075c7cd75eb8e999be",
 };
