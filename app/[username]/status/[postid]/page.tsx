@@ -4,6 +4,8 @@ import { Ellipsis, MessageCircle, Repeat2, Heart, Bookmark } from "lucide-react"
 import VideoComp from "@/components/VideoComp"
 import { getFileDetails } from "@/actions/getFileDetails"
 import Comments from "@/components/Comments"
+import Feed from "@/components/Feed"
+import Link from "next/link"
 
 
 const page = async () => {
@@ -13,7 +15,7 @@ const page = async () => {
   return (
     <div className="p-4 1xl:self-start self-center">
       <h1 className="text-2xl font-bold">Post</h1>
-      <div className="border-t border-gray-300 pb-4 mt-4 ">
+      <div className="border-t border-gray-300 mt-4 ">
        <div className="mt-4 flex items-center space-x-3 font-semibold text-foreground/70">
         <Repeat2 size={27} className="" />
         <span> Kelvin reposted</span>
@@ -30,7 +32,9 @@ const page = async () => {
               {/* FEED HEADER*/}
             <div className="flex justify-between  w-full items-center">
               <div className="flex">
-                <p className="m-auto ml-8 font-semibold">{user.name}</p>
+                <Link href="/h3ktorr">
+                  <p className="m-auto ml-8 font-semibold">{user.name}</p>
+                </Link>
                 <p className="m-auto ml-4 text-sm text-foreground/70">{(user.createdAt).toLocaleString()}</p>
               </div>
               <Ellipsis size={20} className="text-foreground" />
@@ -58,10 +62,11 @@ const page = async () => {
               <Heart size={27} className="text-foreground" />
               <Bookmark size={27} className="text-foreground" />
             </div>
-            </div>
           </div>
+        </div>
       </div>
-          <Comments />
+      <Comments />
+      <Feed comment={true} />
     </div>
   )
 }
