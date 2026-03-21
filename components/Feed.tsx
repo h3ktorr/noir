@@ -4,6 +4,7 @@ import ImageComp from "./ImageComp";
 import { getFileDetails } from "@/actions/getFileDetails";
 import VideoComp from "./VideoComp";
 import Link from "next/link";
+import { prisma } from "@/lib/prisma";
 
 const Feed = async ({comment}: {comment?: boolean}) => {
   const feedsWithImages = await Promise.all(
@@ -18,6 +19,10 @@ const Feed = async ({comment}: {comment?: boolean}) => {
       };
     })
   );
+
+  const users = await prisma.user.findMany();
+  console.log(users);
+  
 
   return (
     <div className="flex flex-col gap-4">
