@@ -20,7 +20,7 @@ const Feed = async ({comment}: {comment?: boolean}) => {
     })
   );
 
-  const users = prisma.user.findMany();
+  const users = await prisma.user.findMany();
 
   console.log(users);
 
