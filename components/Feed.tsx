@@ -22,8 +22,10 @@ const Feed = async ({comment}: {comment?: boolean}) => {
 
   const users = await prisma.user.findMany();
 
-  console.log(users);
+  const post = await prisma.post.findMany()
 
+  console.log(users);
+  console.log(post);
   return (
     <div className="flex flex-col gap-4">
       {feedsWithImages.map((feed) => {

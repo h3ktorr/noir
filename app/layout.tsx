@@ -6,6 +6,7 @@ import { Nunito } from "next/font/google";
 import Footer from "@/components/Footer";
 import CreatePost from "@/components/CreatePost";
 import AppContextProvider from "@/context/AppContext";
+import { ClerkProvider } from '@clerk/nextjs';
 
 const nunito = Nunito({
   subsets: ["latin"],
@@ -26,20 +27,22 @@ export default function RootLayout({
   modal?: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={nunito.variable}>
-      <AppContextProvider>
-        <body className="flex h-screen">
-          <Sidebar />
-          <Navbar />
-          <main className="ml-24 pt-14 w-full flex flex-col min-h-screen overflow-x-hidden">
-            <div className="grow flex flex-col">
-              {children}
-            </div>
-            <Footer />
-          </main>
-          <CreatePost />
-        </body>
-      </AppContextProvider>
-    </html>
+    <ClerkProvider>
+      <html lang="en" className={nunito.variable}>
+        <AppContextProvider>
+          <body className="flex h-screen">
+            <Sidebar />
+            <Navbar />
+            <main className="ml-24 pt-14 w-full flex flex-col min-h-screen overflow-x-hidden">
+              <div className="grow flex flex-col">
+                {children}
+              </div>
+              <Footer />
+            </main>
+            <CreatePost />
+          </body>
+        </AppContextProvider>
+      </html>
+    </ClerkProvider>
   );
 }
