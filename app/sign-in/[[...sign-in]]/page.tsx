@@ -1,67 +1,129 @@
-"use client"
+'use client'
 
 import { useSignIn } from '@clerk/nextjs'
-import { useState } from 'react';
+import { useRouter } from 'next/navigation'
 
-const SignInPage = () => {
-  const { signIn, fetchStatus, errors } = useSignIn();
-  const [step, setStep] = useState('start');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [code, setCode] = useState('');
+export default function Page() {
+  const { signIn, errors, fetchStatus } = useSignIn()
+  const router = useRouter()
 
-  const handleStart = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault()
+  const handleSubmit = async (formData: FormData) => {
+    const emailAddress = formData.get('email') as string
+    const password = formData.get('password') as string
 
-    await signIn.create({
-      identifier: email,
+    const { error } = await signIn.password({
+      emailAddress,
+      password,
     })
+    if (error) {
+      console.error(JSON.stringify(error, null, 2))
+      return
+    }
 
-    setStep('password') // move to next step
-  };
+    if (signIn.status === 'complete') {
+      await signIn.finalize({
+        navigate: ({ session, decorateUrl }) => {
+          // Handle session tasks
+          // See https://clerk.com/docs/guides/development/custom-flows/authentication/session-tasks
+          if (session?.currentTask) {
+            console.log(session?.currentTask)
+            return
+          }
+
+          // If no session tasks, navigate the signed-in user to the home page
+          const url = decorateUrl('/')
+          if (url.startsWith('http')) {
+            window.location.href = url
+          } else {
+            router.push(url)
+          }
+        },
+      })
+    } else if (signIn.status === 'needs_second_factor') {
+      // See https://clerk.com/docs/guides/development/custom-flows/authentication/multi-factor-authentication
+    } else if (signIn.status === 'needs_client_trust') {
+      // For other second factor strategies,
+      // see https://clerk.com/docs/guides/development/custom-flows/authentication/client-trust
+      const emailCodeFactor = signIn.supportedSecondFactors.find(
+        (factor) => factor.strategy === 'email_code',
+      )
+
+      if (emailCodeFactor) {
+        await signIn.mfa.sendEmailCode()
+      }
+    } else {
+      // Check why the sign-in is not complete
+      console.error('Sign-in attempt not complete:', signIn)
+    }
+  }
+
+  const handleVerify = async (formData: FormData) => {
+    const code = formData.get('code') as string
+
+    await signIn.mfa.verifyEmailCode({ code })
+
+    if (signIn.status === 'complete') {
+      await signIn.finalize({
+        navigate: ({ session, decorateUrl }) => {
+          // Handle session tasks
+          // See https://clerk.com/docs/guides/development/custom-flows/authentication/session-tasks
+          if (session?.currentTask) {
+            console.log(session?.currentTask)
+            return
+          }
+
+          // If no session tasks, navigate the signed-in user to the home page
+          const url = decorateUrl('/')
+          if (url.startsWith('http')) {
+            window.location.href = url
+          } else {
+            router.push(url)
+          }
+        },
+      })
+    }
+  }
+
+  if (signIn.status === 'needs_client_trust') {
+    return (
+      <>
+        <h1>Verify your account</h1>
+        <form action={handleVerify}>
+          <div>
+            <label htmlFor="code">Code</label>
+            <input id="code" name="code" type="text" />
+            {errors.fields.code && <p>{errors.fields.code.message}</p>}
+          </div>
+          <button type="submit" disabled={fetchStatus === 'fetching'}>
+            Verify
+          </button>
+        </form>
+        <button onClick={() => signIn.mfa.sendEmailCode()}>I need a new code</button>
+        <button onClick={() => signIn.reset()}>Start over</button>
+      </>
+    )
+  }
 
   return (
-    <div>
-      {step === 'start' && (
-        <form onSubmit={handleStart}>
-          <input
-            type="email"
-            placeholder="Email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-          />
-          <button type="submit">Continue</button>
-        </form>
-      )}
-      {step === 'password' && (
-        <form onSubmit={(e) => {
-          e.preventDefault();
-        }}>
-          <input
-            type="password"
-            placeholder="Password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-          />
-          <button type="submit">Sign In</button>
-        </form>
-      )}
-      {step === 'code' && (
-        <form onSubmit={(e) => {
-          e.preventDefault();
-        }}>
-          <input
-            type="text"
-            placeholder="Code"
-            value={code}
-            onChange={(e) => setCode(e.target.value)}
-          />
-          <button type="submit">Verify</button>
-        </form>
-      )}
-
-    </div>
+    <>
+      <h1>Sign in</h1>
+      <form action={handleSubmit}>
+        <div>
+          <label htmlFor="email">Enter email address</label>
+          <input id="email" name="email" type="email" />
+          {errors.fields.identifier && <p>{errors.fields.identifier.message}</p>}
+        </div>
+        <div>
+          <label htmlFor="password">Enter password</label>
+          <input id="password" name="password" type="password" />
+          {errors.fields.password && <p>{errors.fields.password.message}</p>}
+        </div>
+        <button type="submit" disabled={fetchStatus === 'fetching'}>
+          Continue
+        </button>
+      </form>
+      {/* For your debugging purposes. You can just console.log errors, but we put them in the UI for convenience */}
+      {errors && <p>{JSON.stringify(errors, null, 2)}</p>}
+    </>
   )
-}
-
-export default SignInPage
+} //TODO create the ui for sign up and sign in so that you can integrate the sign in and sign up flow with the clerk sdk
