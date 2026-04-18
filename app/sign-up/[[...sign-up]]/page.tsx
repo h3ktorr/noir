@@ -33,15 +33,6 @@ export default function Page() {
             placeholder="Enter your email address"
             className="w-full p-2 rounded-lg text-background border border-background"
           />
-          <label htmlFor="password" className="text-sm font-medium">
-            Password
-          </label>      
-          <input
-            type="password"
-            name="password"
-            placeholder="Password"
-            className="w-full p-2 rounded-lg text-background border border-background"
-          />
           <button
             type="submit"
             className="bg-background text-foreground px-4 py-2 rounded-lg hover:bg-primary/80 transition mt-4 cursor-pointer"

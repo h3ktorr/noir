@@ -1,46 +1,239 @@
+'use client'
+
+import { useSignIn, useSignUp } from '@clerk/nextjs';
+import { useRouter } from 'next/navigation';
+import { useState } from "react";
+import type { ClerkAPIError } from '@clerk/types'
+import VerifyEmail from '@/components/VerifyEmail';
+import CompleteSignup from '@/components/CompleteSignup';
+
 export default function Page() {
+  const { signIn, errors, fetchStatus } = useSignIn()
+  const { signUp } = useSignUp()
+  const router = useRouter()
+
+  const [emailAddress, setEmailAddress] = useState('')
+  const [code, setCode] = useState('')
+  const [verifying, setVerifying] = useState(false)
+  const [showMissingRequirements, setShowMissingRequirements] = useState(false)
+
+  // Helper to finalize sign-in and navigate
+  const finalizeSignIn = async () => {
+    await signIn.finalize({
+      navigate: ({ session, decorateUrl }) => {
+        if (session?.currentTask) {
+          // Handle pending session tasks
+          // See https://clerk.com/docs/guides/development/custom-flows/authentication/session-tasks
+          console.log(session?.currentTask)
+          return
+        }
+
+        const url = decorateUrl('/')
+        if (url.startsWith('http')) {
+          window.location.href = url
+        } else {
+          router.push(url)
+        }
+      },
+    })
+  }
+
+  // Helper to finalize sign-up and navigate
+  const finalizeSignUp = async () => {
+    await signUp.finalize({
+      navigate: ({ session, decorateUrl }) => {
+        if (session?.currentTask) {
+          // Handle pending session tasks
+          // See https://clerk.com/docs/guides/development/custom-flows/authentication/session-tasks
+          console.log(session?.currentTask)
+          return
+        }
+
+        const url = decorateUrl('/')
+        if (url.startsWith('http')) {
+          window.location.href = url
+        } else {
+          router.push(url)
+        }
+      },
+    })
+  }
+
+  // Step 1: Start sign-in with signUpIfMissing and send email code
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+
+    // Create sign-in for the signUpIfMissing flow.
+    // The flow will proceed to verification regardless of whether an account exists or not.
+    const { error: createError } = await signIn.create({
+      identifier: emailAddress,
+      signUpIfMissing: true,
+    })
+    if (createError) {
+      console.error(JSON.stringify(createError, null, 2))
+      return
+    }
+
+    // Start the verification step
+    if (!createError) {
+      const { error: sendError } = await signIn.emailCode.sendCode()
+      if (sendError) {
+        console.error(JSON.stringify(sendError, null, 2))
+        return
+      }
+
+      setVerifying(true)
+    }
+  }
+
+  // Step 2: Verification step
+  const handleVerify = async (e: React.FormEvent) => {
+    e.preventDefault()
+
+    const { error } = await signIn.emailCode.verifyCode({ code })
+
+    // When the user doesn't exist, verifyCode returns an error with
+    // the code 'sign_up_if_missing_transfer'. Check for this error
+    // to determine if we need to transfer to sign-up.
+    if (error) {
+      const clerkError = error as { errors?: ClerkAPIError[] }
+
+      const transferError = clerkError.errors?.find(
+        (e) => e.code === 'sign_up_if_missing_transfer'
+      )
+
+      if (transferError) {
+        await handleTransfer()
+        return
+      }
+
+      // Some other error occurred
+      console.error(JSON.stringify(error, null, 2))
+      return
+    }
+
+    // The user exists and verification succeeded
+    if (signIn.status === 'complete') {
+      await finalizeSignIn()
+    } else if (signIn.status === 'needs_second_factor') {
+      // Handle MFA if required
+      // See https://clerk.com/docs/guides/development/custom-flows/authentication/multi-factor-authentication
+    } else if (signIn.status === 'needs_client_trust') {
+      // Handle client trust if required
+      // See https://clerk.com/docs/guides/development/custom-flows/authentication/client-trust
+    } else {
+      // Check why the sign-in is not complete
+      console.error('Sign-in attempt not complete:', signIn.status)
+    }
+  }
+
+  // Step 3: Transfer to sign-up
+  const handleTransfer = async () => {
+    // Create sign-up using transfer.
+    // This moves the verified identification from the sign-in to a new sign-up.
+    const { error } = await signUp.create({ transfer: true })
+    if (error) {
+      console.error(JSON.stringify(error, null, 2))
+      return
+    }
+
+    if (signUp.status === 'complete') {
+      // No additional requirements - sign-up is complete
+      await finalizeSignUp()
+    } else if (signUp.status === 'missing_requirements') {
+      // Additional fields are required to complete sign-up.
+      // Common missing fields include legal_accepted, first_name, last_name, etc.
+      // Show a form to collect the missing fields.
+      setShowMissingRequirements(true)
+    } else {
+      console.error('Unexpected sign-up status:', signUp.status)
+    }
+  }
+
+  // Step 4: Submit missing requirements to complete sign-up
+  const handleMissingRequirements = async (e: React.FormEvent) => {
+    e.preventDefault()
+
+    // This example handles legal acceptance as an example.
+    // You can extend this to handle other missing fields like first_name, last_name, etc.
+    // by checking signUp.missingFields and collecting the appropriate values.
+    const { error } = await signUp.update({
+      legalAccepted: true,
+    })
+    if (error) {
+      console.error(JSON.stringify(error, null, 2))
+      return
+    }
+
+    if (signUp.status === 'complete') {
+      await finalizeSignUp()
+    } else if (signUp.status === 'missing_requirements') {
+      // Still missing other fields
+      console.error('Additional fields still required:', signUp.missingFields)
+    } else {
+      console.error('Unexpected sign-up status:', signUp.status)
+    }
+  }
+
+  // Step 4 UI: Show missing requirements form
+  if (showMissingRequirements) {
+    return (
+      <>
+        <CompleteSignup
+          signUp={signUp}
+          fetchStatus={fetchStatus}
+          handleMissingRequirements={handleMissingRequirements}
+          signIn={signIn}
+        />
+
+      </>
+    )
+  }
+
+  // Step 2 UI: Show verification code form
+  if (verifying) {
+    return VerifyEmail({
+      emailAddress,
+      code,
+      errors,
+      fetchStatus,
+      signIn,
+      setCode,
+      handleVerify
+    })
+  }
+
+  console.log(errors)
+
   return (
     <div className="fixed z-50 top-0 self-end w-screen bg-background overflow-auto h-screen flex justify-center items-center">
-      <div className="bg-foreground m-auto w-[50vw] p-4 sm:px-12 h-10/12 overflow-scroll rounded-2xl flex flex-col items-center text-background pt-8">
+      <div className="bg-foreground m-auto w-[50vw] p-4 sm:px-12 h-10/12 overflow-scroll rounded-2xl flex flex-col items-center text-background pt-12">
         <h3 className="text-2xl font-bold">Sign In to Noir</h3>
         <p className="mt-2">Welcome back! Please enter your details.</p>
-        <form action="/api/auth/sign-in" method="POST" className="flex flex-col mt-6 gap-3 w-full px-8">
+        <form onSubmit={handleSubmit} className="flex flex-col mt-6 gap-3 w-full px-8">
           <label htmlFor="email" className="text-sm font-medium">
             Email Address
           </label>
           <input
             type="email"
             name="email"
+            value={emailAddress}
+            onChange={(e) => setEmailAddress(e.target.value)}
             placeholder="Enter your email address"
             className="w-full p-2 rounded-lg text-background border border-background"
           />
-          {/* Password label + forgot password */}
-          <div className="flex items-center justify-between">
-            <label htmlFor="password" className="text-sm font-medium">
-              Password
-            </label>
-            <button
-              type="button"
-              className="text-sm hover:text-purple-500 hover:underline"
-            >
-              Forgot password?
-            </button>
-          </div>
-          <input
-            type="password"
-            name="password"
-            placeholder="Password"
-            className="w-full p-2 rounded-lg text-background border border-background"
-          />
+          {errors.fields.identifier && <p>{errors.fields.identifier.message}</p>}
           <button
             type="submit"
-            className="bg-background text-foreground px-4 py-2 rounded-lg hover:bg-primary/80 transition mt-2 cursor-pointer"
+            className="bg-background text-foreground px-4 py-2 rounded-lg hover:bg-primary/80 transition mt-4 cursor-pointer"
           >
-            Sign In
+            Proceed
           </button>
         </form>
+      {/* Required for sign-up flows. Clerk's bot sign-up protection is enabled by default. */}
+      <div id="clerk-captcha" className='mt-3' />
         {/* Divider */}
-        <div className="w-full flex items-center gap-4 my-4 px-8">
+        <div className="w-full flex items-center gap-4 my-6 px-8">
           <div className="h-px bg-gray-300 grow"></div>
           <span className="text-sm text-gray-400">or</span>
           <div className="h-px bg-gray-300 grow"></div>
@@ -71,7 +264,7 @@ export default function Page() {
           </svg>
           Continue with Google
         </button>
-        <p className="text-sm mt-2">Don't have an account? <a href="/sign-up" className="text-purple-500 hover:underline ">Sign up</a></p>
+        <p className="text-sm mt-3">Don't have an account? <a href="/sign-up" className="text-purple-500 hover:underline ">Sign up</a></p>
       </div>
     </div>
   )
