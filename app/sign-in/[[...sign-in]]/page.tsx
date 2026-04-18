@@ -153,17 +153,29 @@ export default function Page() {
   // Step 4: Submit missing requirements to complete sign-up
   const handleMissingRequirements = async (e: React.FormEvent) => {
     e.preventDefault()
+    console.log('signUp status BEFORE update:', signUp.status)
+  console.log('signUp id:', signUp.id)
+  console.log('missing fields:', signUp.missingFields)
 
-    // This example handles legal acceptance as an example.
-    // You can extend this to handle other missing fields like first_name, last_name, etc.
-    // by checking signUp.missingFields and collecting the appropriate values.
-    const { error } = await signUp.update({
-      legalAccepted: true,
-    })
-    if (error) {
-      console.error(JSON.stringify(error, null, 2))
+    const formData = new FormData(e.currentTarget as HTMLFormElement)
+    const username = formData.get('username') as string
+    if (!signUp || !signUp.id) {
+      console.error('SignUp not initialized properly')
       return
     }
+    if (!username) {
+      console.error('Username is required')
+      return
+    }
+    const { error } = await signUp.update({
+      username,
+    } as any)
+    if (error) {
+      console.log(error)
+      return
+    }
+
+    console.log('signUp status AFTER update:', signUp.status)
 
     if (signUp.status === 'complete') {
       await finalizeSignUp()
@@ -185,22 +197,23 @@ export default function Page() {
           handleMissingRequirements={handleMissingRequirements}
           signIn={signIn}
         />
-
       </>
     )
   }
 
   // Step 2 UI: Show verification code form
   if (verifying) {
-    return VerifyEmail({
-      emailAddress,
-      code,
-      errors,
-      fetchStatus,
-      signIn,
-      setCode,
-      handleVerify
-    })
+    return (
+      <VerifyEmail
+          emailAddress={emailAddress}
+          code={code}
+          errors={errors}
+          fetchStatus={fetchStatus}
+          signIn={signIn}
+          setCode={setCode}
+          handleVerify={handleVerify}
+      />
+    )
   }
 
   console.log(errors)
