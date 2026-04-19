@@ -26,6 +26,26 @@ const CompleteSignup = ({ signUp, fetchStatus, handleMissingRequirements, signIn
                 className="w-full p-2 rounded-lg text-background border border-background"
               />
             </div>
+            <div>
+              <label htmlFor="first_name" className="text-sm font-medium">First Name</label>
+              <input
+                id="first_name"
+                name="first_name"
+                type="text"
+                required
+                className="w-full p-2 rounded-lg text-background border border-background"
+              />
+            </div>
+            <div>
+              <label htmlFor="last_name" className="text-sm font-medium">Last Name</label>
+              <input
+                id="last_name"
+                name="last_name"
+                type="text"
+                required
+                className="w-full p-2 rounded-lg text-background border border-background"
+              />
+            </div>
           <button type="submit" disabled={fetchStatus === 'fetching'} className="bg-background text-foreground px-4 py-2 rounded-lg hover:bg-primary/80 transition mt-4 cursor-pointer">
             Create account
           </button>

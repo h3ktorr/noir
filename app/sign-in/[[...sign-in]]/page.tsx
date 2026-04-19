@@ -159,6 +159,7 @@ export default function Page() {
 
     const formData = new FormData(e.currentTarget as HTMLFormElement)
     const username = formData.get('username') as string
+    console.log('Collected username:', username)
     if (!signUp || !signUp.id) {
       console.error('SignUp not initialized properly')
       return
@@ -168,10 +169,14 @@ export default function Page() {
       return
     }
     const { error } = await signUp.update({
-      username,
-    } as any)
+      firstName: formData.get('first_name') as string,
+      lastName: formData.get('last_name') as string,
+      unsafeMetadata: {
+        username,
+      }
+    })
     if (error) {
-      console.log(error)
+      console.error(error)
       return
     }
 
