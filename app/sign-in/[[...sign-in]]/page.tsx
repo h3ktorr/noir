@@ -17,6 +17,15 @@ export default function Page() {
   const [verifying, setVerifying] = useState(false)
   const [showMissingRequirements, setShowMissingRequirements] = useState(false)
 
+  //TODO: FIX THIS BUTTON
+  const handleGoogleSignIn = async () => {
+  await signIn.create({
+    strategy: 'oauth_google',
+    redirectUrl: '/sso-callback',
+    actionCompleteRedirectUrl: '/',
+  })
+}
+
   // Helper to finalize sign-in and navigate
   const finalizeSignIn = async () => {
     await signIn.finalize({
@@ -260,6 +269,7 @@ export default function Page() {
         {/* Google button */}
         <button
           type="button"
+          onClick={handleGoogleSignIn}
           className="bg-white text-black w-[80%] max-w-75 flex items-center justify-center gap-2 py-2 rounded-lg font-medium hover:bg-gray-100 transition"
         >
           <svg viewBox="0 0 24 24" width={20} height={20}>
