@@ -1,6 +1,7 @@
 'use client'
 
-import { useSignIn, useSignUp } from '@clerk/nextjs';
+import { useClerk, useSignIn, useSignUp } from '@clerk/nextjs';
+import { OAuthStrategy } from '@clerk/shared/types'
 import { useRouter } from 'next/navigation';
 import { useState } from "react";
 import type { ClerkAPIError } from '@clerk/types'
@@ -11,20 +12,37 @@ export default function Page() {
   const { signIn, errors, fetchStatus } = useSignIn()
   const { signUp } = useSignUp()
   const router = useRouter()
+  const { redirectToSignIn } = useClerk()
 
   const [emailAddress, setEmailAddress] = useState('')
   const [code, setCode] = useState('')
   const [verifying, setVerifying] = useState(false)
   const [showMissingRequirements, setShowMissingRequirements] = useState(false)
 
-  //TODO: FIX THIS BUTTON
-  const handleGoogleSignIn = async () => {
-  await signIn.create({
-    strategy: 'oauth_google',
-    redirectUrl: '/sso-callback',
-    actionCompleteRedirectUrl: '/',
-  })
-}
+  //TODO: REFACTOR THIS COMPONENT
+  const signInWith = async (strategy: OAuthStrategy) => {
+    const { error } = await signIn.sso({
+      strategy,
+      redirectCallbackUrl: '/sso-callback',
+      redirectUrl: '/sign-in/tasks', // Learn more about session tasks at https://clerk.com/docs/guides/development/custom-flows/authentication/session-tasks
+    })
+    if (error) {
+      // See https://clerk.com/docs/guides/development/custom-flows/error-handling
+      // for more info on error handling
+      console.error(JSON.stringify(error, null, 2))
+      return
+    }
+
+    if (signIn.status === 'needs_second_factor') {
+      // See https://clerk.com/docs/guides/development/custom-flows/authentication/multi-factor-authentication
+    } else if (signIn.status === 'needs_client_trust') {
+      // See https://clerk.com/docs/guides/development/custom-flows/authentication/client-trust
+    } else {
+      // Check why the sign-in is not complete
+      console.error('Sign-in attempt not complete:', signIn)
+    }
+  }
+
 
   // Helper to finalize sign-in and navigate
   const finalizeSignIn = async () => {
@@ -269,7 +287,7 @@ export default function Page() {
         {/* Google button */}
         <button
           type="button"
-          onClick={handleGoogleSignIn}
+          onClick={() => signInWith('oauth_google')}
           className="bg-white text-black w-[80%] max-w-75 flex items-center justify-center gap-2 py-2 rounded-lg font-medium hover:bg-gray-100 transition"
         >
           <svg viewBox="0 0 24 24" width={20} height={20}>
