@@ -1,6 +1,6 @@
 'use client'
 
-import { useClerk, useSignIn, useSignUp } from '@clerk/nextjs';
+import { useSignIn, useSignUp } from '@clerk/nextjs';
 import { OAuthStrategy } from '@clerk/shared/types'
 import { useRouter } from 'next/navigation';
 import { useState } from "react";
@@ -12,14 +12,12 @@ export default function Page() {
   const { signIn, errors, fetchStatus } = useSignIn()
   const { signUp } = useSignUp()
   const router = useRouter()
-  const { redirectToSignIn } = useClerk()
 
   const [emailAddress, setEmailAddress] = useState('')
   const [code, setCode] = useState('')
   const [verifying, setVerifying] = useState(false)
   const [showMissingRequirements, setShowMissingRequirements] = useState(false)
 
-  //TODO: REFACTOR THIS COMPONENT
   const signInWith = async (strategy: OAuthStrategy) => {
     const { error } = await signIn.sso({
       strategy,
@@ -35,8 +33,10 @@ export default function Page() {
 
     if (signIn.status === 'needs_second_factor') {
       // See https://clerk.com/docs/guides/development/custom-flows/authentication/multi-factor-authentication
+      console.log('needs_second_factor')
     } else if (signIn.status === 'needs_client_trust') {
       // See https://clerk.com/docs/guides/development/custom-flows/authentication/client-trust
+      console.log('needs_client_trust')
     } else {
       // Check why the sign-in is not complete
       console.error('Sign-in attempt not complete:', signIn)
