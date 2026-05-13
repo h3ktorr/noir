@@ -5,8 +5,6 @@ type CompleteSignupProps = {
   signIn: any
 }
 
-//TODO: complete the ui design for this component
-
 const CompleteSignup = ({ signUp, fetchStatus, handleMissingRequirements, signIn }: CompleteSignupProps) => {
   return (
     <div className="fixed z-50 top-0 self-end w-screen bg-background overflow-auto h-screen flex justify-center items-center">
