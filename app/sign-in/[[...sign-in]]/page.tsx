@@ -180,30 +180,6 @@ export default function Page() {
   // Step 4: Submit missing requirements to complete sign-up
   const handleMissingRequirements = async (e: React.FormEvent) => {
     e.preventDefault()
-    console.log('signUp status BEFORE update:', signUp.status)
-  console.log('signUp id:', signUp.id)
-  console.log('missing fields:', signUp.missingFields)
-
-    const formData = new FormData(e.currentTarget as HTMLFormElement)
-    const username = formData.get('username') as string
-    const firstName = formData.get('first_name') as string
-    const lastName = formData.get('last_name') as string
-    console.log(username, firstName, lastName)
-    if (!signUp || !signUp.id) {
-      console.error('SignUp not initialized properly')
-      return
-    }
-    if (!username) {
-      console.error('Username is required')
-      return
-    }
-    const { error } = await signUp.update({
-      firstName,
-      lastName,
-    })
-    if (error) {
-      console.error(error)
-    }
 
     console.log('signUp status AFTER update:', signUp.status)
 
