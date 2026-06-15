@@ -2,6 +2,7 @@ import { user } from "@/assets/dummydata"
 import Feed from "@/components/Feed"
 import { MapPin, CalendarDays } from "lucide-react";
 import ImageComp from "@/components/ImageComp";
+import LogoutButton from "@/components/LogoutButton";
 
 const page = () => {
   return (
@@ -42,9 +43,12 @@ const page = () => {
 
           {/* NAME + USERNAME */}
           <div>
-            <h1 className="text-2xl font-bold leading-tight">
-              {user.displayName}
-            </h1>
+            <div className="flex gap-10">
+              <h1 className="text-2xl font-bold leading-tight">
+                {user.displayName}
+              </h1>
+              <LogoutButton />
+            </div>
             <p className="text-foreground/60 text-sm">
               @{user.username}
             </p>
