@@ -27,7 +27,7 @@ const Feed = async ({comment}: {comment?: boolean}) => {
   console.log(users);
   console.log(post);
   return (
-    <div className="flex flex-col gap-4">
+    <div className="">
       {feedsWithImages.map((feed) => {
         
         return (
