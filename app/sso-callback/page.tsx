@@ -1,6 +1,7 @@
 'use client'
 
 import { useClerk, useSignIn, useSignUp } from '@clerk/nextjs'
+import { Loader2 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { useEffect, useRef } from 'react'
 
@@ -14,6 +15,13 @@ export default function Page() {
   const navigateToSignIn = () => {
     router.push('/sign-in')
   }
+
+  const loadingMessage =
+  signIn.status === 'complete'
+    ? 'Finalizing sign in...'
+    : signUp.status === 'missing_requirements'
+      ? 'Preparing your account...'
+      : 'Signing you in...';
 
   const finalizeSignIn = async () => {
     await signIn.finalize({
@@ -151,10 +159,18 @@ export default function Page() {
   }, [clerk, signIn, signUp])
 
   return (
-    <div>
-      {/* Because a sign-in transferred to a sign-up might require captcha verification, make sure to render the
-captcha element. */}
-      <div id="clerk-captcha"></div>
-    </div>
+    <div className="fixed inset-0 flex flex-col items-center justify-center bg-background">
+    <Loader2 className="h-10 w-10 animate-spin" />
+
+    <h2 className="mt-4 text-lg font-semibold">
+      Please wait...
+    </h2>
+
+    <p className="text-sm opacity-70">
+      {loadingMessage}
+    </p>
+
+    <div id="clerk-captcha" />
+  </div>
   )
 }

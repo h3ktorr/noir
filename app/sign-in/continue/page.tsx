@@ -10,12 +10,13 @@ export default function Page() {
   const { signUp } = useSignUp()
 
   const handleSubmit = async (formData: FormData) => {
-    const firstName = formData.get('firstName') as string
-    const lastName = formData.get('lastName') as string
+    const username = formData.get('username') as string
 
     // Update the `SignUp` object with the missing fields
     // This example collects first and last name and passes it to SignUp.update() but you can modify this example for whatever settings you have enabled in the Clerk Dashboard
-    await signUp.update({ firstName, lastName })
+    await signUp.update({
+      username,
+    } as any)
 
     if (signUp.status === 'complete') {
       await signUp.finalize({
@@ -48,19 +49,31 @@ export default function Page() {
   }
 
   return (
-    <div>
-      <h1>Continue sign-up</h1>
-      <form action={handleSubmit}>
-        <label htmlFor="firstName">First name</label>
-        <input type="text" name="firstName" id="firstName" />
-        <label htmlFor="lastName">Last name</label>
-        <input type="text" name="lastName" id="lastName" />
-
-        <button type="submit">Submit</button>
-      </form>
-
-      {/* Required for sign-up flows. Clerk's bot sign-up protection is enabled by default */}
-      <div id="clerk-captcha" />
+    <div className="fixed z-50 top-0 self-end w-screen bg-background overflow-auto h-screen flex justify-center items-center">
+      <div className="bg-foreground m-auto w-[50vw] p-4 sm:px-12 h-10/12 overflow-scroll rounded-2xl flex flex-col items-center text-background pt-12">
+        <h1 className="text-2xl font-bold">Complete your account</h1>
+        <p className="mt-2 text-center">
+          Your email has been verified. Please choose a username to finish creating your account.
+        </p>
+        <form className="flex flex-col mt-6 gap-3 w-full px-8" action={handleSubmit}>
+            <div>
+              <label htmlFor="username" className="text-sm font-medium">Username</label>
+              <input
+                id="username"
+                name="username"
+                type="text"
+                required
+                className="w-full p-2 rounded-lg text-background border border-background"
+              />
+            </div>
+          <button 
+            type="submit" 
+            className="bg-background text-foreground px-4 py-2 rounded-lg hover:bg-primary/80 transition mt-4 cursor-pointer">
+            Create account
+          </button>
+        </form>
+        <div id="clerk-captcha" />
+      </div>
     </div>
   )
 }
