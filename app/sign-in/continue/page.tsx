@@ -1,45 +1,55 @@
 'use client'
 
 import { useSignUp } from '@clerk/nextjs'
+import { Loader2 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
+import { useState } from 'react'
 
 export default function Page() {
   const router = useRouter()
   // Use `useSignUp()` hook to access the `SignUp` object
   // `missing_requirements` and `missingFields` are only available on the `SignUp` object
   const { signUp } = useSignUp()
+  const [isLoading, setIsLoading] = useState(false)
 
   const handleSubmit = async (formData: FormData) => {
     const username = formData.get('username') as string
 
     // Update the `SignUp` object with the missing fields
     // This example collects first and last name and passes it to SignUp.update() but you can modify this example for whatever settings you have enabled in the Clerk Dashboard
-    await signUp.update({
-      username,
-    } as any)
+    try {
+      setIsLoading(true)
+      await signUp.update({
+        username,
+      } as any)
 
-    if (signUp.status === 'complete') {
-      await signUp.finalize({
-        navigate: async ({ session, decorateUrl }) => {
-          // Handle session tasks
-          // See https://clerk.com/docs/guides/development/custom-flows/authentication/session-tasks
-          if (session?.currentTask) {
-            console.log(session?.currentTask)
-            return
-          }
+      if (signUp.status === 'complete') {
+        await signUp.finalize({
+          navigate: async ({ session, decorateUrl }) => {
+            // Handle session tasks
+            // See https://clerk.com/docs/guides/development/custom-flows/authentication/session-tasks
+            if (session?.currentTask) {
+              console.log(session?.currentTask)
+              return
+            }
 
-          // If no session tasks, navigate the signed-in user to the home page
-          const url = decorateUrl('/')
-          if (url.startsWith('http')) {
-            window.location.href = url
-          } else {
-            router.push(url)
-          }
-        },
-      })
-    } else if (signUp.status !== 'missing_requirements') {
-      // Check why the sign-up is not complete
-      console.error('Sign-up attempt not complete:', signUp.status)
+            // If no session tasks, navigate the signed-in user to the home page
+            const url = decorateUrl('/')
+            if (url.startsWith('http')) {
+              window.location.href = url
+            } else {
+              router.push(url)
+            }
+          },
+        })
+      } else if (signUp.status !== 'missing_requirements') {
+        // Check why the sign-up is not complete
+        console.error('Sign-up attempt not complete:', signUp.status)
+      }
+    } catch (err) {
+      console.error(err)
+    } finally {
+      setIsLoading(false)
     }
   }
 
@@ -68,8 +78,16 @@ export default function Page() {
             </div>
           <button 
             type="submit" 
+            disabled={isLoading}
             className="bg-background text-foreground px-4 py-2 rounded-lg hover:bg-primary/80 transition mt-4 cursor-pointer">
-            Create account
+            {isLoading ? (
+              <span className="flex items-center justify-center gap-2">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Creating account...
+              </span>
+            ) : (
+              'Create account'
+            )}
           </button>
         </form>
         <div id="clerk-captcha" />

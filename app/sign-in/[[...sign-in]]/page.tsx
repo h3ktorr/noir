@@ -4,13 +4,10 @@ import { useSignIn, useSignUp } from '@clerk/nextjs';
 import { OAuthStrategy } from '@clerk/shared/types'
 import { useRouter } from 'next/navigation';
 import { useState } from "react";
-import type { ClerkAPIError } from '@clerk/types'
-import VerifyEmail from '@/components/VerifyEmail';
-import CompleteSignup from '@/components/CompleteSignup';
 import { Loader2 } from 'lucide-react';
 
 export default function Page() {
-  const { signIn, errors, fetchStatus } = useSignIn()
+  const { signIn, errors } = useSignIn()
   const router = useRouter()
 
   const [emailAddress, setEmailAddress] = useState('')
@@ -24,7 +21,7 @@ export default function Page() {
       const { error } = await signIn.sso({
         strategy,
         redirectCallbackUrl: '/sso-callback',
-        redirectUrl: '/sign-in/tasks', // Learn more about session tasks at https://clerk.com/docs/guides/development/custom-flows/authentication/session-tasks
+        redirectUrl: '/', // Learn more about session tasks at https://clerk.com/docs/guides/development/custom-flows/authentication/session-tasks
       })
       if (error) {
         // See https://clerk.com/docs/guides/development/custom-flows/error-handling
