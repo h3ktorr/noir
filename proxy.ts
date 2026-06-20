@@ -1,10 +1,19 @@
 import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
 
-const isProtectedRoute = createRouteMatcher("/");
+const isProtectedRoute = createRouteMatcher(["/"]);
 
 export default clerkMiddleware(
   async (auth, req) => {
-    if (isProtectedRoute(req)) await auth.protect();
+    const { userId } = await auth();
+
+    // This is the key improvement:
+    // avoids race-condition redirect loops during OAuth hydration
+    if (isProtectedRoute(req)) {
+      if (!userId) {
+        return (await auth()).redirectToSignIn();
+      }
+      await auth.protect();
+    }
   },
   {
     signInUrl: "/sign-in",

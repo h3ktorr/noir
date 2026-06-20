@@ -66,12 +66,17 @@ export default function Page() {
   }
 
   useEffect(() => {
-    ;(async () => {
+    (async () => {
       if (!clerk.loaded || hasRun.current) {
         return
       }
       // Prevent Next.js from re-running this effect when the page is re-rendered during session activation.
       hasRun.current = true
+
+      if (signUp.status === 'missing_requirements') {
+        console.log('Missing requirements detected')
+        return router.push('/sign-in/continue')
+      }
 
       // If this was a sign-in, and it's complete, there's nothing else to do.
       if (signIn.status === 'complete') {

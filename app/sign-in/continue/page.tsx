@@ -3,7 +3,7 @@
 import { useSignUp } from '@clerk/nextjs'
 import { Loader2 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 
 export default function Page() {
   const router = useRouter()
@@ -54,9 +54,11 @@ export default function Page() {
   }
 
   // If the sign-up is complete, the user shouldn't be on this page
+  useEffect(() => {
   if (signUp.status === 'complete') {
-    router.push('/')
+    router.replace("/");
   }
+}, [signUp.status, router]);
 
   return (
     <div className="fixed z-50 top-0 self-end w-screen bg-background overflow-auto h-screen flex justify-center items-center">
