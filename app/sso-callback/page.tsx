@@ -106,6 +106,12 @@ export default function Page() {
         return navigateToSignIn()
       }
 
+      console.log("signIn.status", signIn.status)
+console.log("signIn.isTransferable", signIn.isTransferable)
+
+console.log("signUp.status", signUp.status)
+console.log("signUp.isTransferable", signUp.isTransferable)
+
       // If the sign-in used an external account not associated with an existing user, create a sign-up
       if (signIn.isTransferable) {
         await signUp.create({ transfer: true })

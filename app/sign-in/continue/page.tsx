@@ -60,6 +60,12 @@ export default function Page() {
   }
 }, [signUp.status, router]);
 
+useEffect(() => {
+  console.log('SIGN UP STATUS:', signUp?.status)
+  console.log('MISSING FIELDS:', signUp?.missingFields)
+  console.log('SIGN UP ID:', signUp?.id)
+}, [signUp])
+
   return (
     <div className="fixed z-50 top-0 self-end w-screen bg-background overflow-auto h-screen flex justify-center items-center">
       <div className="bg-foreground m-auto w-[50vw] p-4 sm:px-12 h-10/12 overflow-scroll rounded-2xl flex flex-col items-center text-background pt-12">
