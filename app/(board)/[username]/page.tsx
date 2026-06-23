@@ -3,8 +3,17 @@ import Feed from "@/components/Feed"
 import { MapPin, CalendarDays } from "lucide-react";
 import ImageComp from "@/components/ImageComp";
 import LogoutButton from "@/components/LogoutButton";
+import prisma from "@/lib/prisma";
+import { notFound } from "next/navigation";
 
-const page = () => {
+const page = async ({params}:{params: Promise< {username: string} >}) => {
+
+  const userNew = await prisma.user.findUnique({
+    where: {username: (await params).username}
+  })
+
+  if(!userNew) return notFound()
+
   return (
     <div className="w-full">
       <div className="w-full border-b border-gray-300 mb-6">
@@ -105,7 +114,7 @@ const page = () => {
 
         </div>
       </div>
-      <Feed />
+      <Feed userProfileId={userNew.id} />
     </div>
   )
 }
