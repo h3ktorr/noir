@@ -3,6 +3,7 @@ import Post from "./Post";
 import { getFileDetails } from "@/actions/getFileDetails";
 import { feeds } from "@/assets/dummydata"
 import { auth } from "@clerk/nextjs/server";
+import InfiniteFeed from "./InfiniteFeed";
 
 
 const Feed = async ({userProfileId}: {userProfileId?: string}) => {
@@ -36,7 +37,12 @@ const Feed = async ({userProfileId}: {userProfileId?: string}) => {
       })).map(follow => follow.followingId)
   ]}};
 
-  const post = await prisma.post.findMany({ where: whereCondition });
+  const post = await prisma.post.findMany({ 
+    where: whereCondition, 
+    take: 3, 
+    skip: 0, 
+    orderBy: { createdAt: 'desc' } 
+  });
 
   console.log(post);
   
@@ -48,6 +54,7 @@ const Feed = async ({userProfileId}: {userProfileId?: string}) => {
           <Post key={feed.id} post={feed} />
         )
       })}
+      <InfiniteFeed />
     </div>
   )
 }
