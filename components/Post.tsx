@@ -3,6 +3,8 @@ import ImageComp from "./ImageComp";
 
 import VideoComp from "./VideoComp";
 import Link from "next/link";
+import {Post as PostType} from "@prisma/client";
+import {format} from "timeago.js"
 
 type PostWithDetails = {
   id: number;
@@ -18,7 +20,7 @@ type PostWithDetails = {
   } | null;
 };
 
-const Post = async ({comment, post}: {comment?: boolean, post: PostWithDetails}) => {
+const Post = ({comment, post}: {comment?: boolean, post: PostType}) => {
  
   return (
    <div key={post.id} className={`border-b last:border-b-0 w-150 pb-6 flex 1xl:self-start self-center ${comment ? "px-4 first:border-t pt-6 h-fit" : "px-12 pt-12 h-162.5"}`}>
@@ -36,14 +38,14 @@ const Post = async ({comment, post}: {comment?: boolean, post: PostWithDetails})
          <Link href="/h3ktorr">
            <p className="m-auto ml-8 font-semibold">{post.name}</p>
          </Link>
-           <p className="m-auto ml-4 text-sm text-foreground/70">{post.createdAt}</p>
+           <p className="m-auto ml-4 text-sm text-foreground/70">{format(post.createdAt)}</p>
        </div>
        <Ellipsis size={20} className="text-foreground" />
      </div>
      {/* FEED BODY*/}
      <Link href='/h3ktorr/status/123'>
        <div className={`ml-8 flex flex-col gap-4 w-full ${comment ? "pt-2" : "pt-6"}`}>
-         <p className="">{post.caption}</p>
+         <p className="">{post.desc}</p>
          {post.fileDetails?.fileType === "image" && <ImageComp
            src={post.fileDetails?.url}
            alt={post.name}
