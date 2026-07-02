@@ -36,6 +36,15 @@ export async function GET(request: NextRequest) {
 
   const post = await prisma.post.findMany({
     where: whereCondition,
+    include: {
+      user: {
+        select: {
+          displayName: true,
+          username: true,
+          img: true,
+        },
+      },
+    },
     take: LIMIT,
     skip: (Number(page) - 1) * LIMIT,
   });
