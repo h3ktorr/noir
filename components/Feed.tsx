@@ -31,6 +31,17 @@ const Feed = async ({userProfileId}: {userProfileId?: string}) => {
           username: true,
           img: true
         }
+      },
+      rePost: {
+        include: {
+          user: {
+            select: {
+              displayName: true,
+              username: true,
+              img: true
+            }
+          },
+        }
       }
     },
     take: 3, 

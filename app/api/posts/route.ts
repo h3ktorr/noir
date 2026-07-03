@@ -44,6 +44,17 @@ export async function GET(request: NextRequest) {
           img: true,
         },
       },
+      rePost: {
+        include: {
+          user: {
+            select: {
+              displayName: true,
+              username: true,
+              img: true,
+            },
+          },
+        },
+      },
     },
     take: LIMIT,
     skip: (Number(page) - 1) * LIMIT,
