@@ -55,6 +55,13 @@ export async function GET(request: NextRequest) {
           },
         },
       },
+      _count: {
+        select: {
+          likes: true,
+          rePosts: true,
+          comments: true,
+        },
+      },
     },
     take: LIMIT,
     skip: (Number(page) - 1) * LIMIT,

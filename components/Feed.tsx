@@ -42,7 +42,14 @@ const Feed = async ({userProfileId}: {userProfileId?: string}) => {
             }
           },
         }
-      }
+      },
+      _count: {
+        select: {
+          likes: true,
+          rePosts: true,
+          comments: true
+        }
+      },
     },
     take: 3, 
     skip: 0, 

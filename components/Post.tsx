@@ -4,6 +4,7 @@ import VideoComp from "./VideoComp";
 import Link from "next/link";
 import {Post as PostType} from "@prisma/client";
 import {format} from "timeago.js"
+import PostInteractions from "./PostInteractions";
 
 type PostWithDetails = PostType & {
     user: {
@@ -17,6 +18,11 @@ type PostWithDetails = PostType & {
       username: string;
       img: string;
     };
+  };
+  _count: {
+    likes: number;
+    rePosts: number;
+    comments: number;
   }
 };
 
@@ -24,6 +30,8 @@ const Post = ({comment, post}: {comment?: boolean, post: PostWithDetails}) => {
 
   const originalPost = post.rePost || post;
 
+  console.log(post._count);
+  
   return (
    <div key={post.id} className={`border-b last:border-b-0 w-150 pb-6 1xl:self-start self-center ${comment ? "px-4 first:border-t pt-6 h-fit" : "px-12 pt-12"}`}>
     {post.rePostId && (
@@ -73,15 +81,10 @@ const Post = ({comment, post}: {comment?: boolean, post: PostWithDetails}) => {
        </div>
      </Link>
      {/* FEED FOOTER*/}
-     <div className={`flex pt-8 gap-16 ${comment ? "justify-end mr-10" : "justify-center"}`}>
-       <MessageCircle size={27} className="text-foreground" />
-       <Repeat2 size={27} className="text-foreground" />
-       <Heart size={27} className="text-foreground" />
-       <Bookmark size={27} className="text-foreground" />
-     </div>
-     </div>
-     </div>
+     <PostInteractions count={post._count} />
+    </div>
    </div>
+  </div>
 )}
 
 export default Post
