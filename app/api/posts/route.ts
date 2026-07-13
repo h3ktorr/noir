@@ -53,6 +53,37 @@ export async function GET(request: NextRequest) {
               img: true,
             },
           },
+          _count: {
+            select: {
+              likes: true,
+              rePosts: true,
+              comments: true,
+            },
+          },
+          likes: {
+            where: {
+              userId: userId,
+            },
+            select: {
+              id: true,
+            },
+          },
+          rePosts: {
+            where: {
+              userId: userId,
+            },
+            select: {
+              id: true,
+            },
+          },
+          saves: {
+            where: {
+              userId: userId,
+            },
+            select: {
+              id: true,
+            },
+          },
         },
       },
       _count: {
@@ -60,6 +91,30 @@ export async function GET(request: NextRequest) {
           likes: true,
           rePosts: true,
           comments: true,
+        },
+      },
+      likes: {
+        where: {
+          userId: userId,
+        },
+        select: {
+          id: true,
+        },
+      },
+      rePosts: {
+        where: {
+          userId: userId,
+        },
+        select: {
+          id: true,
+        },
+      },
+      saves: {
+        where: {
+          userId: userId,
+        },
+        select: {
+          id: true,
         },
       },
     },

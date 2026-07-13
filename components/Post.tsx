@@ -18,19 +18,40 @@ type PostWithDetails = PostType & {
       username: string;
       img: string;
     };
-  };
+    _count: {
+      likes: number;
+      rePosts: number;
+      comments: number;
+    }
+    likes: {
+      id: number;
+    }[];
+    rePosts: {
+      id: number;
+    }[];
+    saves: {
+      id: number;
+    }[];
+  }
   _count: {
     likes: number;
     rePosts: number;
     comments: number;
   }
+  likes: {
+    id: number;
+  }[];
+  rePosts: {
+    id: number;
+  }[];
+  saves: {
+    id: number;
+  }[];
 };
 
 const Post = ({comment, post}: {comment?: boolean, post: PostWithDetails}) => {
 
   const originalPost = post.rePost || post;
-
-  console.log(post._count);
   
   return (
    <div key={post.id} className={`border-b last:border-b-0 w-150 pb-6 1xl:self-start self-center ${comment ? "px-4 first:border-t pt-6 h-fit" : "px-12 pt-12"}`}>
@@ -43,7 +64,7 @@ const Post = ({comment, post}: {comment?: boolean, post: PostWithDetails}) => {
     <div className="flex">
      
        <ImageComp
-         src={originalPost.user.img || "general/noAvater.png"}
+         src={originalPost.user.img || "general/noAvatar.png"}
          alt={originalPost.user.displayName}
          w={50}
          h={50}
@@ -54,7 +75,7 @@ const Post = ({comment, post}: {comment?: boolean, post: PostWithDetails}) => {
        {/* FEED HEADER*/}
      <div className="flex justify-between  w-full items-center">
        <div className="flex">
-         <Link href="/h3ktorr">
+         <Link href={`${originalPost.user.username}`}>
            <p className="m-auto ml-8 font-semibold">{originalPost.user.displayName}</p>
          </Link>
           <p className="m-auto ml-4 text-sm text-foreground/70">@{originalPost.user.username}</p>
@@ -63,7 +84,7 @@ const Post = ({comment, post}: {comment?: boolean, post: PostWithDetails}) => {
        <Ellipsis size={20} className="text-foreground" />
      </div>
      {/* FEED BODY*/}
-     <Link href='/h3ktorr/status/123'>
+     <Link href={`${originalPost.user.username}/status/123`}>
        <div className={`ml-8 flex flex-col gap-4 w-full ${comment ? "pt-2" : "pt-6"}`}>
          <p className="">{originalPost.desc}</p>
          {originalPost.user.img && originalPost.user.img.fileType === "image" && <ImageComp
@@ -81,7 +102,12 @@ const Post = ({comment, post}: {comment?: boolean, post: PostWithDetails}) => {
        </div>
      </Link>
      {/* FEED FOOTER*/}
-     <PostInteractions count={post._count} />
+     <PostInteractions 
+      count={originalPost._count} 
+      isLiked={!!originalPost.likes.length}
+      isReposted={!!originalPost.rePosts.length}
+      isSaved={!!originalPost.saves.length}
+     />
     </div>
    </div>
   </div>

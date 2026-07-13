@@ -41,6 +41,37 @@ const Feed = async ({userProfileId}: {userProfileId?: string}) => {
               img: true
             }
           },
+          _count: {
+            select: {
+              likes: true,
+              rePosts: true,
+              comments: true
+            }
+          },
+          likes: {
+            where: {
+              userId: userId
+            },
+            select: {
+              id: true
+            }
+          },
+          rePosts: {
+            where: {
+              userId: userId
+            },
+            select: {
+              id: true
+            }
+          },
+          saves: {
+            where: {
+              userId: userId
+            },
+            select: {
+              id: true
+            }
+          }
         }
       },
       _count: {
@@ -48,6 +79,30 @@ const Feed = async ({userProfileId}: {userProfileId?: string}) => {
           likes: true,
           rePosts: true,
           comments: true
+        }
+      },
+      likes: {
+        where: {
+          userId: userId
+        },
+        select: {
+          id: true
+        }
+      },
+      rePosts: {
+        where: {
+          userId: userId
+        },
+        select: {
+          id: true
+        }
+      },
+      saves: {
+        where: {
+          userId: userId
+        },
+        select: {
+          id: true
         }
       },
     },

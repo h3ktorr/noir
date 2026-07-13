@@ -1,18 +1,33 @@
-import { user } from "@/assets/dummydata"
+import { user as userTest } from "@/assets/dummydata"
 import Feed from "@/components/Feed"
 import { MapPin, CalendarDays } from "lucide-react";
 import ImageComp from "@/components/ImageComp";
 import LogoutButton from "@/components/LogoutButton";
 import prisma from "@/lib/prisma";
 import { notFound } from "next/navigation";
+import { auth } from "@clerk/nextjs/server";
 
 const page = async ({params}:{params: Promise< {username: string} >}) => {
 
-  const userNew = await prisma.user.findUnique({
-    where: {username: (await params).username}
+  const { userId } = await auth();
+  const user = await prisma.user.findUnique({
+    where: {username: (await params).username},
+    include: {
+      _count: {
+        select: {
+          followers: true,
+          following: true
+        }
+      },
+      following: userId ? {
+        where: {
+          followerId: userId
+        }
+      } : undefined,
+    }
   })
 
-  if(!userNew) return notFound()
+  if(!user) return notFound()
 
   return (
     <div className="w-full">
@@ -23,7 +38,7 @@ const page = async ({params}:{params: Promise< {username: string} >}) => {
           {/* COVER */}
           <div className="relative w-full aspect-3/1 bg-gray-300">
             <ImageComp
-              src={user.coverImage}
+              src={user.cover || "general/cover.jpg"}
               alt="Cover"
               tr={true}
               w={1200}
@@ -36,7 +51,7 @@ const page = async ({params}:{params: Promise< {username: string} >}) => {
           <div className="absolute left-6 -bottom-16 overflow-hidden w-32 h-32  rounded-full bg-gray-300">
             <div className="">
               <ImageComp
-                src={user.image}
+                src={user.img || "general/noAvatar.png"}
                 alt="Avatar"
                 w={128}
                 h={128}
@@ -114,7 +129,7 @@ const page = async ({params}:{params: Promise< {username: string} >}) => {
 
         </div>
       </div>
-      <Feed userProfileId={userNew.id} />
+      <Feed userProfileId={user.id} />
     </div>
   )
 }
