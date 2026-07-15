@@ -1,4 +1,3 @@
-import { user as userTest } from "@/assets/dummydata"
 import Feed from "@/components/Feed"
 import { MapPin, CalendarDays } from "lucide-react";
 import ImageComp from "@/components/ImageComp";
@@ -6,6 +5,7 @@ import LogoutButton from "@/components/LogoutButton";
 import prisma from "@/lib/prisma";
 import { notFound } from "next/navigation";
 import { auth } from "@clerk/nextjs/server";
+import FollowButton from "@/components/FollowButton";
 
 const page = async ({params}:{params: Promise< {username: string} >}) => {
 
@@ -36,15 +36,17 @@ const page = async ({params}:{params: Promise< {username: string} >}) => {
         <div className="relative w-full">
 
           {/* COVER */}
-          <div className="relative w-full aspect-3/1 bg-gray-300">
-            <ImageComp
-              src={user.cover || "general/cover.jpg"}
-              alt="Cover"
-              tr={true}
-              w={1200}
-              h={400}
-              className="object-cover"
-            />
+          <div className="relative w-full aspect-3/1 bg-gray-300 h-72">
+            {user.cover && (
+              <ImageComp
+                src={user.cover}
+                alt="Cover"
+                tr={true}
+                w={1200}
+                h={288}
+                className="object-cover"
+              />
+            )}
           </div>
 
           {/* AVATAR */}
@@ -67,11 +69,14 @@ const page = async ({params}:{params: Promise< {username: string} >}) => {
 
           {/* NAME + USERNAME */}
           <div>
-            <div className="flex gap-10">
+            <div className="flex justify-between">
               <h1 className="text-2xl font-bold leading-tight">
                 {user.displayName}
               </h1>
-              <LogoutButton />
+              <div className="flex gap-4">
+                <LogoutButton />
+                <FollowButton userId={user.id} isFollowed={!!user.following.length} />
+              </div>
             </div>
             <p className="text-foreground/60 text-sm">
               @{user.username}

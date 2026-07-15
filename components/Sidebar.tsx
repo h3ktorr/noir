@@ -43,10 +43,10 @@ const Sidebar = () => {
         />
       </Link>
 
-      <Link href="/h3ktorr">
+      <Link href="/kelly">
         <User
           size={45}
-          fill={pathname.startsWith("/h3ktorr") ? "currentColor" : "none"}
+          fill={pathname.startsWith("/kelly") ? "currentColor" : "none"}
         />
       </Link>
       <button onClick={openCreatePost} aria-label="Create post" className="text-foreground">
