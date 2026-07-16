@@ -1,4 +1,4 @@
-import { Ellipsis, MessageCircle, Repeat2, Heart, Bookmark, Repeat } from "lucide-react";
+import { Ellipsis, Repeat } from "lucide-react";
 import ImageComp from "./ImageComp";
 import VideoComp from "./VideoComp";
 import Link from "next/link";
@@ -8,15 +8,15 @@ import PostInteractions from "./PostInteractions";
 
 type PostWithDetails = PostType & {
     user: {
-      displayName: string;
+      displayName: string | null;
       username: string;
-      img: string;
+      img: string | null;
     };
   rePost?: PostType & {
     user: {
-      displayName: string;
+      displayName: string | null;
       username: string;
-      img: string;
+      img: string | null;
     };
     _count: {
       likes: number;
@@ -54,7 +54,7 @@ const Post = ({comment, post}: {comment?: boolean, post: PostWithDetails}) => {
   const originalPost = post.rePost || post;
   
   return (
-   <div key={post.id} className={`border-b last:border-b-0 w-150 pb-6 1xl:self-start self-center ${comment ? "px-4 first:border-t pt-6 h-fit" : "px-12 pt-12"}`}>
+   <div key={post.id} className={`border-b last:border-b-0 w-150 pb-6 1xl:self-start self-center ${comment ? "pt-6 h-fit" : "px-12 pt-12"}`}>
     {post.rePostId && (
       <div className="flex gap-4 items-center mb-6">
         <Repeat size={20} className="text-foreground" />
@@ -65,10 +65,10 @@ const Post = ({comment, post}: {comment?: boolean, post: PostWithDetails}) => {
      
        <ImageComp
          src={originalPost.user.img || "general/noAvatar.png"}
-         alt={originalPost.user.displayName}
+         alt={originalPost.user.displayName || "User Avatar"}
          w={50}
          h={50}
-         className={`rounded-full h-fit ${comment && "w-12 h-12"}`}
+         className={`rounded-full h-fit ${comment && "w-9 h-9"}`}
        />
      
      <div className="w-full">
@@ -84,12 +84,12 @@ const Post = ({comment, post}: {comment?: boolean, post: PostWithDetails}) => {
        <Ellipsis size={20} className="text-foreground" />
      </div>
      {/* FEED BODY*/}
-     <Link href={`${originalPost.user.username}/status/123`}>
+     <Link href={`${originalPost.user.username}/status/${originalPost.id}`}>
        <div className={`ml-8 flex flex-col gap-4 w-full ${comment ? "pt-2" : "pt-6"}`}>
          <p className="">{originalPost.desc}</p>
          {originalPost.user.img && originalPost.user.img.fileType === "image" && <ImageComp
            src={originalPost.user.img}
-           alt={originalPost.user.displayName}
+           alt={originalPost.user.displayName || "User Avatar"}
            w={100}
            h={100}
            className="rounded-2xl w-100 h-100" tr={true}
@@ -107,6 +107,7 @@ const Post = ({comment, post}: {comment?: boolean, post: PostWithDetails}) => {
       isLiked={!!originalPost.likes.length}
       isReposted={!!originalPost.rePosts.length}
       isSaved={!!originalPost.saves.length}
+      comment={comment}
      />
     </div>
    </div>
