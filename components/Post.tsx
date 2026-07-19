@@ -103,6 +103,7 @@ const Post = ({comment, post}: {comment?: boolean, post: PostWithDetails}) => {
      </Link>
      {/* FEED FOOTER*/}
      <PostInteractions 
+      postId={originalPost.id}
       count={originalPost._count} 
       isLiked={!!originalPost.likes.length}
       isReposted={!!originalPost.rePosts.length}
