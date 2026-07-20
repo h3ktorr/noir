@@ -58,6 +58,7 @@ const page = async ({params}:{params: Promise<{ username: string, postid: string
         }
       },
       comments: {
+        orderBy: { createdAt: "desc" },
         include: {
           user: {
             select: {
@@ -149,7 +150,13 @@ const page = async ({params}:{params: Promise<{ username: string, postid: string
               />} */}
             </div>
             {/* FEED FOOTER*/}
-           <PostInteractions isLiked={!!post.likes.length} isReposted={!!post.rePosts.length} isSaved={!!post.saves.length} />
+           <PostInteractions 
+            isLiked={!!post.likes.length} 
+            isReposted={!!post.rePosts.length} 
+            isSaved={!!post.saves.length} 
+            count={post._count}
+            postId={post.id}
+          />
           </div>
         </div>
       </div>
