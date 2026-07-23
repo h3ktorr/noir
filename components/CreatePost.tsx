@@ -1,11 +1,13 @@
 'use client'
 
 import { AppContext } from "@/context/AppContext";
-import { useContext, useEffect, useRef, useState } from "react";
+import { useContext, useEffect, useRef, useState, useActionState } from "react";
 import { X, Image as LumineImage, Smile, CalendarClock, MapPin  } from "lucide-react";
 import ImageComp from "./ImageComp";
 import { createPostAction } from "@/actions/createPost";
 import Image from "next/image";
+import { useUser } from "@clerk/nextjs";
+import { addPost } from "@/action";
 
 const CreatePost = () => {
   const { isCreatePostOpen, closeCreatePost} = useContext(AppContext)!;
@@ -27,6 +29,10 @@ const CreatePost = () => {
 
   const previewUrl = media ? URL.createObjectURL(media) : null;
 
+  const { user } = useUser();
+
+  const [state, formAction, isPending] = useActionState(createPostAction, {success: false, error: false})
+
   useEffect(() => {
     if (isCreatePostOpen) {
       document.body.style.overflow = "hidden";
@@ -45,8 +51,8 @@ const CreatePost = () => {
           <h3 className="text-xl font-bold">Create Post</h3>
           <X size={20} onClick={closeCreatePost}/>
         </div>
-        <form action={createPostAction} className="sm:flex p-4 sm:gap-6">
-          <ImageComp src="assets/profile-3.jpg" alt="profile" w={48} h={48} className="w-12 h-12 rounded-full mb-4 hidden sm:block"/>
+        <form action={formAction} className="sm:flex p-4 sm:gap-6">
+          <ImageComp src={user?.imageUrl || "assets/profile-3.jpg"} alt="profile" w={48} h={48} className="w-12 h-12 rounded-full mb-4 hidden sm:block"/>
           <div className="w-full flex flex-col">
             <textarea rows={5} name="desc" className="w-full p-2 rounded-lg text-background border border-background resize-none" placeholder="What's on your mind?"></textarea>
             {
@@ -76,7 +82,8 @@ const CreatePost = () => {
                 <CalendarClock className="inline mr-4 cursor-pointer hover:text-primary transition w-5 sm:w-6"/>
                 <MapPin className="inline mr-4 cursor-pointer hover:text-primary transition w-5 sm:w-6"/>
               </div>
-              <button type="submit" className="mt-4 ml-auto bg-background text-foreground px-3 sm:px-4 py-1 sm:py-2 rounded-lg hover:bg-primary/80 transition">Post</button>
+              <button type="submit" className="mt-4 ml-auto bg-background text-foreground px-3 sm:px-4 py-1 sm:py-2 rounded-lg hover:bg-primary/80 transition disabled:cursor-not-allowed" disabled={isPending}>{ isPending ? "Posting" : "Post"}</button>
+              { state.error && <span className="text-red-300 p-4">Something went wrong</span>}
             </div>
           </div>
         </form>

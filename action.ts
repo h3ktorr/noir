@@ -4,6 +4,8 @@ import { auth } from "@clerk/nextjs/server";
 import prisma from "./lib/prisma";
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
+import { upload } from "@imagekit/next";
+import { UploadResponse } from "imagekit/dist/libs/interfaces";
 
 export const likePost = async (postId: number) => {
   const { userId } = await auth();
@@ -119,6 +121,53 @@ export const addComment = async (
       },
     });
     revalidatePath(`/${username}/status/${postId}`);
+    return { success: true, error: false };
+  } catch (error) {
+    return { success: false, error: true };
+  }
+};
+
+export const addPost = async (
+  prevState: { success: boolean; error: boolean },
+  formData: FormData,
+) => {
+  const { userId } = await auth();
+  if (!userId) return { success: false, error: true };
+
+  const desc = formData.get("desc");
+
+  const img = formData.get("img") as string;
+  const video = formData.get("video") as string;
+  const imgHeight = Number(formData.get("imgHeight"));
+
+  // if (!file) {
+  //   console.error("No file provided");
+  //   return;
+  // }
+
+  const Post = z.object({
+    desc: z.string().min(1).max(280),
+  });
+
+  const validatedFields = Post.safeParse({
+    desc: desc,
+  });
+
+  if (!validatedFields.success) {
+    return { success: false, error: true };
+  }
+
+  try {
+    await prisma.post.create({
+      data: {
+        ...validatedFields.data,
+        userId: userId,
+        img,
+        imgHeight,
+        video,
+      },
+    });
+    revalidatePath(`/`);
     return { success: true, error: false };
   } catch (error) {
     return { success: false, error: true };

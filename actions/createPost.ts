@@ -7,6 +7,7 @@ import {
   ImageKitUploadNetworkError,
   upload,
 } from "@imagekit/next";
+import { addPost } from "@/action";
 
 const abortController = new AbortController();
 
@@ -34,53 +35,69 @@ const authenticator = async () => {
   }
 };
 
-export const createPostAction = async (data: FormData) => {
-  const file = data.get("file") as File;
-  if (!file) {
-    console.error("No file provided");
-    return;
-  }
+export const createPostAction = async (
+  prevState: { success: boolean; error: boolean },
+  formData: FormData,
+) => {
+  const file = formData.get("file") as File | null;
+  let img = "";
+  let imgHeight = 0;
+  let video = "";
 
-  let authParams;
-  try {
-    authParams = await authenticator();
-  } catch (authError) {
-    console.error("Failed to authenticate for upload:", authError);
-    return;
-  }
-  const { signature, expire, token, publicKey } = authParams;
+  if (file) {
+    let authParams;
+    try {
+      authParams = await authenticator();
+    } catch (authError) {
+      console.error("Failed to authenticate for upload:", authError);
+      return;
+    }
+    const { signature, expire, token, publicKey } = authParams;
 
-  try {
-    const uploadResponse = await upload({
-      // Authentication parameters
-      expire,
-      token,
-      signature,
-      publicKey,
-      file,
-      fileName: file.name,
-      folder: "/posts",
-      abortSignal: abortController.signal,
-      ...(file.type.includes("image") && {
-        transformation: {
-          pre: "w-600",
-        },
-      }),
-    });
-    console.log("Upload response:", uploadResponse);
-  } catch (error) {
-    // Handle specific error types provided by the ImageKit SDK.
-    if (error instanceof ImageKitAbortError) {
-      console.error("Upload aborted:", error.reason);
-    } else if (error instanceof ImageKitInvalidRequestError) {
-      console.error("Invalid request:", error.message);
-    } else if (error instanceof ImageKitUploadNetworkError) {
-      console.error("Network error:", error.message);
-    } else if (error instanceof ImageKitServerError) {
-      console.error("Server error:", error.message);
-    } else {
-      // Handle any other errors that may occur.
-      console.error("Upload error:", error);
+    try {
+      const uploadResponse = await upload({
+        // Authentication parameters
+        expire,
+        token,
+        signature,
+        publicKey,
+        file,
+        fileName: file.name,
+        folder: "/posts",
+        abortSignal: abortController.signal,
+        ...(file.type.includes("image") && {
+          transformation: {
+            pre: "w-600",
+          },
+        }),
+      });
+      if (uploadResponse.fileType === "image") {
+        img = uploadResponse.filePath as string;
+        imgHeight = uploadResponse.height as number;
+      }
+
+      if (uploadResponse.fileType === "non-image") {
+        video = uploadResponse.filePath as string;
+      }
+    } catch (error) {
+      // Handle specific error types provided by the ImageKit SDK.
+      if (error instanceof ImageKitAbortError) {
+        console.error("Upload aborted:", error.reason);
+      } else if (error instanceof ImageKitInvalidRequestError) {
+        console.error("Invalid request:", error.message);
+      } else if (error instanceof ImageKitUploadNetworkError) {
+        console.error("Network error:", error.message);
+      } else if (error instanceof ImageKitServerError) {
+        console.error("Server error:", error.message);
+      } else {
+        // Handle any other errors that may occur.
+        console.error("Upload error:", error);
+      }
     }
   }
+  formData.set("img", img);
+  formData.set("video", video);
+  formData.set("imgHeight", String(imgHeight));
+
+  return await addPost(prevState, formData);
 };
