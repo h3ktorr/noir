@@ -4,8 +4,33 @@ import { auth } from "@clerk/nextjs/server";
 import prisma from "./lib/prisma";
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
-import { upload } from "@imagekit/next";
-import { UploadResponse } from "imagekit/dist/libs/interfaces";
+
+export const followUser = async (targetUserId: string) => {
+  const { userId } = await auth();
+  if (!userId) return;
+
+  const existingFollow = await prisma.follow.findFirst({
+    where: {
+      followerId: userId,
+      followingId: targetUserId,
+    },
+  });
+
+  if (existingFollow) {
+    await prisma.follow.delete({
+      where: {
+        id: existingFollow.id,
+      },
+    });
+  } else {
+    await prisma.follow.create({
+      data: {
+        followerId: userId,
+        followingId: targetUserId,
+      },
+    });
+  }
+};
 
 export const likePost = async (postId: number) => {
   const { userId } = await auth();
@@ -128,7 +153,7 @@ export const addComment = async (
 };
 
 export const addPost = async (
-  prevState: { success: boolean; error: boolean },
+  _prevState: { success: boolean; error: boolean } | undefined,
   formData: FormData,
 ) => {
   const { userId } = await auth();
@@ -140,13 +165,15 @@ export const addPost = async (
   const video = formData.get("video") as string;
   const imgHeight = Number(formData.get("imgHeight"));
 
-  // if (!file) {
-  //   console.error("No file provided");
-  //   return;
-  // }
+  if (!desc && !img && !video) {
+    return {
+      success: false,
+      error: true,
+    };
+  }
 
   const Post = z.object({
-    desc: z.string().min(1).max(280),
+    desc: z.string().max(280),
   });
 
   const validatedFields = Post.safeParse({
@@ -170,6 +197,7 @@ export const addPost = async (
     revalidatePath(`/`);
     return { success: true, error: false };
   } catch (error) {
+    console.log(error);
     return { success: false, error: true };
   }
 };

@@ -5,6 +5,7 @@ import { useContext } from "react";
 import { House, Mail, Bell, User, SquarePen } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";    
+import Socket from "./Socket";
 
 const Sidebar = () => {
   const { openCreatePost } = useContext(AppContext)!;
@@ -49,9 +50,10 @@ const Sidebar = () => {
           fill={pathname.startsWith("/kelly") ? "currentColor" : "none"}
         />
       </Link>
-      <button onClick={openCreatePost} aria-label="Create post" className="text-foreground">
+      <button onClick={openCreatePost} aria-label="Create post" className="text-foreground hover:cursor-pointer">
         <SquarePen size={45} />
       </button>
+      <Socket />
     </aside>
   )
 }

@@ -36,7 +36,7 @@ const authenticator = async () => {
 };
 
 export const createPostAction = async (
-  prevState: { success: boolean; error: boolean },
+  prevState: { success: boolean; error: boolean } | undefined,
   formData: FormData,
 ) => {
   const file = formData.get("file") as File | null;
@@ -44,13 +44,16 @@ export const createPostAction = async (
   let imgHeight = 0;
   let video = "";
 
-  if (file) {
+  if (file && file.size > 0) {
     let authParams;
     try {
       authParams = await authenticator();
     } catch (authError) {
       console.error("Failed to authenticate for upload:", authError);
-      return;
+      return {
+        success: false,
+        error: true,
+      };
     }
     const { signature, expire, token, publicKey } = authParams;
 
@@ -93,6 +96,10 @@ export const createPostAction = async (
         // Handle any other errors that may occur.
         console.error("Upload error:", error);
       }
+      return {
+        success: false,
+        error: true,
+      };
     }
   }
   formData.set("img", img);

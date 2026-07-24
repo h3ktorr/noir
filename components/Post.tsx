@@ -87,18 +87,18 @@ const Post = ({comment, post}: {comment?: boolean, post: PostWithDetails}) => {
      <Link href={`${originalPost.user.username}/status/${originalPost.id}`}>
        <div className={`ml-8 flex flex-col gap-4 w-full ${comment ? "pt-2" : "pt-6"}`}>
          <p className="">{originalPost.desc}</p>
-         {originalPost.user.img && originalPost.user.img.fileType === "image" && <ImageComp
-           src={originalPost.user.img}
+         {(originalPost.img && originalPost.img !== null) && <ImageComp
+           src={originalPost.img}
            alt={originalPost.user.displayName || "User Avatar"}
-           w={100}
-           h={100}
-           className="rounded-2xl w-100 h-100" tr={true}
+           w={600}
+           h={originalPost.imgHeight || 600}
+           className="rounded-2xl w-100 h-100 object-contain" tr={true}
          />}
-         {originalPost.user.img && originalPost.user.img.fileType === "non-image" && <VideoComp
+         {/* {originalPost.user.img && originalPost.user.img.fileType === "non-image" && <VideoComp
            src={originalPost.user.img}
            className="rounded-2xl w-100 h-100"
            tr={true}
-         />}
+         />} */}
        </div>
      </Link>
      {/* FEED FOOTER*/}

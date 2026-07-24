@@ -23,13 +23,8 @@ const InfiniteFeed = ({userProfileId}: {userProfileId?: string}) => {
 
   if(error) return <div>Error: {error.message}</div>
   if(status === 'pending') return <div>Loading...</div>
-
   
-  console.log("Data:", data);
-  console.log("First page:", data?.pages[0]);
   const allPosts = data?.pages.flatMap(page => page.post) || [];
-  console.log("All Posts:", allPosts);
-
   
   return (
     <InfiniteScroll

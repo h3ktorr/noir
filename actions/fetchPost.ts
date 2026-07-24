@@ -14,8 +14,6 @@ export async function fetchPost() {
       path: "/posts", // 👈 your folder
     });
 
-    console.log(files);
-
     return files;
   } catch (error) {
     console.error(error);

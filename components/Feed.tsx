@@ -109,10 +109,7 @@ const Feed = async ({userProfileId}: {userProfileId?: string}) => {
     take: 3, 
     skip: 0, 
     orderBy: { createdAt: 'desc' } 
-  });
-
-  console.log(post);
-  
+  });  
 
   return (
     <div className="border-r border-gray-100 max-w-fit">

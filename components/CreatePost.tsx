@@ -7,13 +7,11 @@ import ImageComp from "./ImageComp";
 import { createPostAction } from "@/actions/createPost";
 import Image from "next/image";
 import { useUser } from "@clerk/nextjs";
-import { addPost } from "@/action";
 
 const CreatePost = () => {
   const { isCreatePostOpen, closeCreatePost} = useContext(AppContext)!;
   const createPostRef = useRef<HTMLDivElement>(null);
   const [media, setMedia] = useState<File | null>(null);
-  const [sensitive, setSensitive] = useState<boolean>(false); 
   
   const handleCreatePostClose = (e: React.MouseEvent<HTMLDivElement, MouseEvent>) => {
    if (e.target === createPostRef.current) {
@@ -43,6 +41,13 @@ const CreatePost = () => {
       document.body.style.overflow = "auto";
     };
   }, [isCreatePostOpen]);
+
+  useEffect(() => {
+    if (state?.success) {
+      closeCreatePost();
+      setMedia(null);
+    }
+  }, [state, closeCreatePost]);
 
   return (
     <div ref={createPostRef} onClick={handleCreatePostClose} className={isCreatePostOpen ? "fixed z-50 top-0 self-end w-screen bg-black/50 opacity-100 overflow-auto translate-x-0 transition-all duration-500 ease-in h-screen flex justify-center items-center" : "fixed z-50 top-0 self-end w-screen bg-black/50 opacity-0 overflow-hidden -translate-x-full transition-all duration-500 ease-in h-screen flex justify-center items-center"}>
@@ -83,7 +88,7 @@ const CreatePost = () => {
                 <MapPin className="inline mr-4 cursor-pointer hover:text-primary transition w-5 sm:w-6"/>
               </div>
               <button type="submit" className="mt-4 ml-auto bg-background text-foreground px-3 sm:px-4 py-1 sm:py-2 rounded-lg hover:bg-primary/80 transition disabled:cursor-not-allowed" disabled={isPending}>{ isPending ? "Posting" : "Post"}</button>
-              { state.error && <span className="text-red-300 p-4">Something went wrong</span>}
+              { (state!==undefined && state.error) && <span className="text-red-300 p-4">Something went wrong</span>}
             </div>
           </div>
         </form>

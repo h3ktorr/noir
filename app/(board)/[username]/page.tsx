@@ -8,10 +8,11 @@ import { auth } from "@clerk/nextjs/server";
 import FollowButton from "@/components/FollowButton";
 
 const page = async ({params}:{params: Promise< {username: string} >}) => {
+    const { username } = await params;
 
   const { userId } = await auth();
   const user = await prisma.user.findUnique({
-    where: {username: (await params).username},
+    where: {username: username},
     include: {
       _count: {
         select: {
