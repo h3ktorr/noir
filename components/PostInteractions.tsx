@@ -1,16 +1,19 @@
 "use client"
 
 import { likePost, repostPost, savePost } from "@/action";
+import { socket } from "@/socket";
+import { useUser } from "@clerk/nextjs";
 import { Bookmark, Heart, MessageCircle, Repeat2 } from "lucide-react"
 import { useOptimistic, useState } from "react";
 
-const PostInteractions = ({count, isLiked, isReposted, isSaved, comment, postId}: {
+const PostInteractions = ({count, isLiked, isReposted, isSaved, comment, postId, username}: {
   count: {likes: number; rePosts: number; comments: number};
   isLiked: boolean;
   isReposted: boolean;
   isSaved: boolean;
   comment?: boolean;
   postId: number;
+  username: string;
 }) => {
   const likes = count.likes ?? 0;
   const rePosts = count.rePosts ?? 0;
@@ -24,7 +27,21 @@ const PostInteractions = ({count, isLiked, isReposted, isSaved, comment, postId}
     isSaved: isSaved,
   })
 
+  const { user } = useUser();
+
   const likeAction = async () => {
+
+    if(!user) return
+
+    socket.emit("sendNotification", {
+      receiverUsername: username,
+      data: {
+        senderUsername: user.username,
+        type: "like",
+        link: `/${username}/status/${postId}`
+      }
+    })
+
     addOptimisticCount("like");
     await likePost(postId);
     setState((prev) => ({
