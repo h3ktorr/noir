@@ -4,8 +4,8 @@ import { Server } from "socket.io";
 import { v4 as uuidv4 } from "uuid";
 
 const dev = process.env.NODE_ENV !== "production";
-const hostname = "localhost";
-const port = 3000;
+const port = process.env.PORT || 3000;
+const hostname = "0.0.0.0";
 // when using middleware `hostname` and `port` must be provided below
 const app = next({ dev, hostname, port });
 const handler = app.getRequestHandler();
@@ -42,10 +42,12 @@ app.prepare().then(() => {
     socket.on("sendNotification", ({ receiverUsername, data }) => {
       const receiver = getUser(receiverUsername);
 
-      io.to(receiver.socketId).emit("getNotification", {
-        id: uuidv4(),
-        ...data,
-      });
+      if (receiver) {
+        io.to(receiver.socketId).emit("getNotification", {
+          id: uuidv4(),
+          ...data,
+        });
+      }
     });
 
     socket.on("disconnect", () => {
