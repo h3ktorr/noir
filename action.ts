@@ -4,6 +4,7 @@ import { auth } from "@clerk/nextjs/server";
 import prisma from "./lib/prisma";
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
+import ably from "./lib/ably";
 
 export const followUser = async (targetUserId: string) => {
   const { userId } = await auth();
@@ -38,8 +39,8 @@ export const likePost = async (postId: number) => {
 
   const existingLike = await prisma.like.findFirst({
     where: {
-      userId: userId,
-      postId: postId,
+      userId,
+      postId,
     },
   });
 
@@ -49,14 +50,50 @@ export const likePost = async (postId: number) => {
         id: existingLike.id,
       },
     });
-  } else {
-    await prisma.like.create({
-      data: {
-        userId: userId,
-        postId: postId,
-      },
-    });
+
+    return;
   }
+
+  const post = await prisma.post.findUnique({
+    where: {
+      id: postId,
+    },
+    select: {
+      userId: true,
+    },
+  });
+
+  if (!post) return;
+
+  await prisma.like.create({
+    data: {
+      userId,
+      postId,
+    },
+  });
+
+  // Don't notify yourself when you like your own post
+  if (post.userId === userId) return;
+
+  const sender = await prisma.user.findUnique({
+    where: {
+      id: userId,
+    },
+    select: {
+      username: true,
+    },
+  });
+
+  if (!sender) return;
+
+  const channel = ably.channels.get(`notifications:${post.userId}`);
+
+  await channel.publish("notification", {
+    id: crypto.randomUUID(),
+    senderUsername: sender.username,
+    type: "like",
+    link: `/${sender.username}/status/${postId}`,
+  });
 };
 
 export const repostPost = async (postId: number) => {

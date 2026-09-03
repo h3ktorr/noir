@@ -109,7 +109,6 @@ const Post = ({comment, post}: {comment?: boolean, post: PostWithDetails}) => {
       isReposted={!!originalPost.rePosts.length}
       isSaved={!!originalPost.saves.length}
       comment={comment}
-      username={originalPost.user.username}
      />
     </div>
    </div>
