@@ -13,7 +13,7 @@ const PostInteractions = ({count, isLiked, isReposted, isSaved, comment, postId,
   isSaved: boolean;
   comment?: boolean;
   postId: number;
-  username: string;
+  username?: string;
 }) => {
   const likes = count.likes ?? 0;
   const rePosts = count.rePosts ?? 0;

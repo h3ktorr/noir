@@ -4,13 +4,17 @@ import { createPostAction } from "@/actions/createPost";
 import ImageComp from "@/components/ImageComp";
 import { AppContext } from "@/context/AppContext";
 import { X, Image as LumineImage, Smile, CalendarClock, MapPin } from "lucide-react";
-import { useContext, useEffect, useRef, useState } from "react";
+import { useContext, useEffect, useRef, useState, useActionState } from "react";
 
 const page = () => {
   const { isCreatePostOpen, closeCreatePost} = useContext(AppContext)!;
   const createPostRef = useRef<HTMLDivElement>(null);
   const [media, setMedia] = useState<File | null>(null);
-  const [sensitive, setSensitive] = useState<boolean>(false); 
+  
+  const [state, formAction, pending] = useActionState(
+  createPostAction,
+  { success: false, error: false }
+);
   
   const handleCreatePostClose = (e: React.MouseEvent<HTMLDivElement, MouseEvent>) => {
    if (e.target === createPostRef.current) {
@@ -44,7 +48,7 @@ const page = () => {
           <h3 className="text-xl font-bold">Create Post</h3>
           <X size={20} onClick={closeCreatePost}/>
         </div>
-        <form action={createPostAction} className="sm:flex p-4 sm:gap-6">
+        <form action={formAction} className="sm:flex p-4 sm:gap-6">
           <ImageComp src="assets/profile-3.jpg" alt="profile" w={48} h={48} className="w-12 h-12 rounded-full mb-4 hidden sm:block"/>
           <div className="w-full flex flex-col">
             <textarea rows={5} name="desc" className="w-full p-2 rounded-lg text-background border border-background resize-none" placeholder="What's on your mind?"></textarea>

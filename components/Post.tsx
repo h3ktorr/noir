@@ -32,7 +32,7 @@ type PostWithDetails = PostType & {
     saves: {
       id: number;
     }[];
-  }
+  } | null;
   _count: {
     likes: number;
     rePosts: number;
