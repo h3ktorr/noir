@@ -3,12 +3,8 @@ import { verifyWebhook } from "@clerk/nextjs/webhooks";
 import { NextRequest } from "next/server";
 
 export async function POST(req: NextRequest) {
-  console.log("===== WEBHOOK HIT =====");
   try {
     const evt = await verifyWebhook(req);
-
-    console.log("EVENT:", evt.type);
-    console.log("USER ID:", evt.data.id);
 
     // Do something with payload
     // For this guide, log payload to console
