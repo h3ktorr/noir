@@ -51,14 +51,14 @@ const page = async ({params}:{params: Promise< {username: string} >}) => {
           </div>
 
           {/* AVATAR */}
-          <div className="absolute left-6 -bottom-16 overflow-hidden w-32 h-32  rounded-full bg-gray-300">
+          <div className="absolute left-6 -bottom-16 overflow-hidden w-23 h-23  rounded-full bg-gray-300">
             <div className="">
               <ImageComp
                 src={user.img || "general/noAvatar.png"}
                 alt="Avatar"
-                w={128}
-                h={128}
-                className="object-cover rounded-full"
+                w={92}
+                h={92}
+                className="object-cover rounded-full md:w-30 md:h-30"
               />
             </div>
           </div>
@@ -71,7 +71,7 @@ const page = async ({params}:{params: Promise< {username: string} >}) => {
           {/* NAME + USERNAME */}
           <div>
             <div className="flex justify-between">
-              <h1 className="text-2xl font-bold leading-tight">
+              <h1 className="text-xl lg:text-2xl font-bold leading-tight">
                 {user.displayName}
               </h1>
               <div className="flex gap-4">

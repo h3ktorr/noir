@@ -48,7 +48,7 @@ const Recommendation = async () => {
       </div>
       <div className="">
        {friendRecommendations.map((person) => (
-       <div className="flex flex-col gap-4 mt-4" key={person.id}>
+       <div className="flex flex-col gap-4 mt-4" key={person.id} >
          <div className="flex items-center gap-4">
            <ImageComp
              src={person.img || "general/noAvatar.png"}

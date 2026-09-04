@@ -51,7 +51,7 @@ const CreatePost = () => {
 
   return (
     <div ref={createPostRef} onClick={handleCreatePostClose} className={isCreatePostOpen ? "fixed z-50 top-0 self-end w-screen bg-black/50 opacity-100 overflow-auto translate-x-0 transition-all duration-500 ease-in h-screen flex justify-center items-center" : "fixed z-50 top-0 self-end w-screen bg-black/50 opacity-0 overflow-hidden -translate-x-full transition-all duration-500 ease-in h-screen flex justify-center items-center"}>
-      <div className="bg-foreground m-auto w-[70vw] p-4 sm:px-12 h-10/12 overflow-scroll rounded-2xl flex flex-col text-background">
+      <div className="bg-foreground m-auto w-3/4 md:w-[70vw] p-2 md:p-4 sm:px-12 h-10/12 overflow-scroll rounded-2xl flex flex-col text-background">
         <div className="p-4 flex justify-between">
           <h3 className="text-xl font-bold">Create Post</h3>
           <X size={20} onClick={closeCreatePost}/>

@@ -35,22 +35,50 @@ const Comments = ({ comments, postId, username }: { comments: CommentWithDetails
   const [state, formAction, isPending] = useActionState(addComment, {success: false, error: false})
 
   return (
-    <div className="mt-4">
-     {user && <form action={ formAction } className="flex items-center gap-4 justify-between p-4">
-      <div className="relative w-12 h-12 rounded-full overflow-hidden">
-       <ImageComp
-        src={ user?.imageUrl }
-        alt={ "User Avatar" }
-        w={40}
-        h={40}
-        className={`rounded-full h-fit`}
+    <div className="ml-4 md:ml-0 mt-4 w-1/2 md:w-full">
+     {user && <form action={formAction} className="p-4">
+  <div className="flex items-center justify-between mb-3">
+    <div className="relative w-10 h-10 sm:w-12 sm:h-12 rounded-full overflow-hidden shrink-0">
+      <ImageComp
+        src={user.imageUrl}
+        alt="User Avatar"
+        w={48}
+        h={48}
+        className="rounded-full"
       />
-      </div>
-      <input type="number" hidden readOnly name="postId" value={postId} />
-      <input type="text" hidden readOnly name="username" value={username} />
-      <input type="text" name="desc" className="flex-1 bg-background border border-foreground focus:outline-none focus:ring-2 focus:ring-primary p-2 px-5 text-lg ml-2 rounded-4xl" placeholder="Post your reply" />
-      <button disabled={isPending} className="py-2 px-4 font-bold bg-white text-black rounded-full disabled:cursor-not-allowed disabled:bg-slate-200">{ isPending ? "Replying..." : "Reply" }</button>
-     </form>}
+    </div>
+
+    <button
+      disabled={isPending}
+      className="
+        py-2 px-4
+        font-bold
+        bg-white text-black
+        rounded-full
+        disabled:cursor-not-allowed
+        disabled:bg-slate-200
+      "
+    >
+      {isPending ? "Replying..." : "Reply"}
+    </button>
+  </div>
+
+  <input type="number" hidden readOnly name="postId" value={postId} />
+  <input type="text" hidden readOnly name="username" value={username} />
+
+  <input
+    type="text"
+    name="desc"
+    placeholder="Post your reply"
+    className="
+      w-full
+      bg-background border border-foreground
+      focus:outline-none focus:ring-2 focus:ring-primary
+      p-2 px-4 text-base sm:text-lg
+      rounded-full
+    "
+  />
+</form>}
      {state.error && <span className="text-red-500 p-4">Something went wrong!</span>}
      {
       comments.map((comment) => (

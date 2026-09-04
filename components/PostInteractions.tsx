@@ -85,32 +85,32 @@ const PostInteractions = ({count, isLiked, isReposted, isSaved, comment, postId 
 
 
   return (
-    <div className={`flex pt-8 gap-16  ${comment ? "justify-between" : "justify-end mr-10"}`}>
+    <div className={`flex ml-8 md:ml-0 pt-4 md:pt-8 gap-10 md:gap-16 items-center ${comment ? "justify-start md:justify-between" : "justify-start md:justify-end mr-10"}`}>
       {/* LIKE */}
-       <form action={likeAction} className="flex gap-1 group">
+       <form action={likeAction} className="flex gap-1 group items-center">
         <button className="" type="submit">
-          <Heart size={27} className={`text-foreground cursor-pointer hover:text-red-500 ${optimisticCount.isLiked ? "text-red-500" : ""}`} />
+          <Heart size={17} className={`text-foreground md:w-6.75 md:h-6.75 cursor-pointer hover:text-red-500 ${optimisticCount.isLiked ? "text-red-500" : ""}`} />
         </button>
         <span className="text-foreground/70 ml-2 self-center">{optimisticCount.likes}</span>
        </form>
       {/* REPOST */}
-       <form action={repostAction} className="flex gap-1 group ">
+       <form action={repostAction} className="flex gap-1 group items-center">
         <button className="" type="submit">
-          <Repeat2 size={27} className={`text-foreground cursor-pointer hover:text-green-500 ${optimisticCount.isReposted ? "text-green-500" : ""}`} />
+          <Repeat2 size={17} className={`text-foreground md:w-6.75 md:h-6.75 cursor-pointer hover:text-green-500 ${optimisticCount.isReposted ? "text-green-500" : ""}`} />
         </button>
         <span className="text-foreground/70 ml-2 self-center">{optimisticCount.rePosts}</span>
        </form>
       {/* COMMENT */}
-       <div className="flex gap-1 group">
-        <MessageCircle size={24} className="text-foreground cursor-pointer hover:text-blue-500" />
+       <div className="flex gap-1 group items-center">
+        <MessageCircle size={15} className="text-foreground md:w-6.75 md:h-6.75 cursor-pointer hover:text-blue-500" />
         <span className="text-foreground/70 ml-2 self-center">{comments}</span>
        </div>
       {/* SAVE */}
        <form action={saveAction} className="flex gap-1 group">
         <button className="" type="submit">
           <Bookmark
-            size={27}
-            className={`cursor-pointer ${
+            size={17}
+            className={`cursor-pointer md:w-6.75 md:h-6.75 ${
               optimisticCount.isSaved
                 ? "text-blue-500 fill-blue-500"
                 : "text-foreground"

@@ -86,7 +86,7 @@ export const allMessages = [
     id: 11,
     name: "Julian Parker",
     image: "assets/profile-1.jpg",
-    message: "Hey! Are we still on for tomorrow?",
+    message: "Are we still on for tomorrow?",
     createdAt: "2:30 PM",
   },
   {
@@ -100,7 +100,7 @@ export const allMessages = [
     id: 31,
     name: "Noah Alvarez",
     image: "assets/profile-3.jpg",
-    message: "Hello! Just wanted to check in.",
+    message: "Just wanted to check in.",
     createdAt: "1:04 PM",
   },
   {

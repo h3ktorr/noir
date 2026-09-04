@@ -28,7 +28,7 @@ export default function LogoutButton() {
     <button
       onClick={handleLogout}
       disabled={isLoggingOut}
-      className="px-4 py-2 rounded-lg bg-red-500 text-white hover:bg-red-600 transition"
+      className="px-2 md:px-4 py-2 rounded-lg bg-red-500 text-white hover:bg-red-600 transition"
     >
       {isLoggingOut ? (
         <span className="flex items-center justify-center gap-2">

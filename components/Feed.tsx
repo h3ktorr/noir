@@ -112,7 +112,7 @@ const Feed = async ({userProfileId}: {userProfileId?: string}) => {
   });  
 
   return (
-    <div className="border-r border-gray-100 max-w-fit">
+    <div className="m-auto lg:m-0 lg:border-r border-gray-100 max-w-fit">
       {post.map((post) => {
         return (
           <Post key={post.id} post={post} />

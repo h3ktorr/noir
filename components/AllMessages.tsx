@@ -3,10 +3,9 @@ import ImageComp from "./ImageComp"
 
 const AllMessages = () => {
   return (
-    <div className="w-1/2 h-full border-r flex flex-col">
-
+    <div className="lg:w-1/2 h-full lg:border-r flex flex-col">
       {/* Header */}
-      <div className="p-4 border-b">
+      <div className="p-4 lg:border-b ">
         <h1 className="text-2xl font-bold">Messages</h1>
         <input
           type="text"

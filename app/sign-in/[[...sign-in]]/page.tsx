@@ -100,7 +100,7 @@ export default function Page() {
 
   return (
     <div className="fixed z-50 top-0 self-end w-screen bg-background overflow-auto h-screen flex justify-center items-center">
-      <div className="bg-foreground m-auto w-[50vw] p-4 sm:px-12 h-10/12 overflow-scroll rounded-2xl flex flex-col items-center text-background pt-12">
+      <div className="bg-foreground m-auto w-3/4 md:w-[50vw] p-4 sm:px-12 h-10/12 overflow-scroll rounded-2xl flex flex-col items-center text-background pt-12">
         <h3 className="text-2xl font-bold">Sign In to Noir</h3>
         <p className="mt-2">Welcome back! Please enter your details.</p>
         <form onSubmit={handleSubmit} className="flex flex-col mt-6 gap-3 w-full px-8">

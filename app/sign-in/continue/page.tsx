@@ -68,7 +68,7 @@ useEffect(() => {
 
   return (
     <div className="fixed z-50 top-0 self-end w-screen bg-background overflow-auto h-screen flex justify-center items-center">
-      <div className="bg-foreground m-auto w-[50vw] p-4 sm:px-12 h-10/12 overflow-scroll rounded-2xl flex flex-col items-center text-background pt-12">
+      <div className="bg-foreground m-auto w-3/4 md:w-[50vw] p-4 sm:px-12 h-10/12 overflow-scroll rounded-2xl flex flex-col items-center text-background pt-12">
         <h1 className="text-2xl font-bold">Complete your account</h1>
         <p className="mt-2 text-center">
           Your email has been verified. Please choose a username to finish creating your account.

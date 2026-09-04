@@ -99,7 +99,7 @@ export default function Page() {
   if (verifying) {
     return (
       <div className="fixed z-50 top-0 w-screen h-screen flex justify-center items-center bg-background">
-        <div className="bg-foreground w-[50vw] p-8 rounded-2xl text-background flex flex-col items-center">
+        <div className="bg-foreground w-3/4 md:w-[50vw] p-8 rounded-2xl text-background flex flex-col items-center">
           <h3 className="text-2xl font-bold">Verify your email</h3>
 
           <form onSubmit={handleVerify} className="w-full mt-6 flex flex-col gap-3 px-8">
@@ -137,7 +137,7 @@ export default function Page() {
   // STEP 4: signup form (your original UI preserved)
   return (
     <div className="fixed z-50 top-0 w-screen bg-background overflow-auto h-screen flex justify-center items-center">
-      <div className="bg-foreground m-auto w-[50vw] p-4 sm:px-12 h-10/12 overflow-scroll rounded-2xl flex flex-col items-center text-background pt-8">
+      <div className="bg-foreground m-auto w-3/4 md:w-[50vw] p-4 sm:px-12 h-10/12 overflow-scroll rounded-2xl flex flex-col items-center text-background pt-8">
 
         <h3 className="text-2xl font-bold">Sign Up for Noir</h3>
         <p className="mt-2">Welcome! Please enter your details.</p>
@@ -210,7 +210,7 @@ export default function Page() {
         </form>
 
         {/* CAPTCHA */}
-        <div id="clerk-captcha" className="mt-3" />
+        <div id="clerk-captcha" className="mt-3 w-full" />
 
         {/* Divider */}
         <div className="w-full flex items-center gap-4 my-4 px-8">

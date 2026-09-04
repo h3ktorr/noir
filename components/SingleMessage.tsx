@@ -3,7 +3,7 @@ import ImageComp from "./ImageComp";
 
 const SingleMessage = () => {
   return (
-    <div className="w-1/2 flex flex-col h-full">
+    <div className="w-1/2 flex-col h-full hidden lg:flex">
       {/* Messages Header */}
       <div className="flex items-center justify-between p-4 border-b border-foreground">
         <div className="flex items-center">

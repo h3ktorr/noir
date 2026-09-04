@@ -4,11 +4,11 @@ import Stories from "@/components/Stories";
 
 export default function Home() {
   return (
-    <div className="">
+    <div className="md:w-[calc(100vw-180px)]">
       <Stories />
-      <div className="flex">
+      <div className="flex w-full grow">
         <Feed />
-        <div className="w-96 max-h-screen overflow-y-auto">
+        <div className="flex-1 max-h-screen overflow-y-auto hidden lg:block">
           <Recommendation />
         </div>
       </div>

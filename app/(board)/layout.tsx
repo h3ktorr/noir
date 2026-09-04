@@ -11,10 +11,10 @@ export default function BoardLayout({
   modal?: React.ReactNode;
 }>) {
   return (
-    <div>
+    <div> 
       <Sidebar />
       <Navbar />
-      <main className="ml-24 pt-14 w-full flex flex-col min-h-screen overflow-x-hidden">
+      <main className="pt-14 w-screen md:w-full flex flex-col min-h-screen overflow-x-hidden pb-16 md:ml-24 md:pb-0">
         <div className="grow flex flex-col">
           {children}
         </div>
