@@ -12,7 +12,7 @@ const adapter = new PrismaMariaDb({
   ssl: {
     rejectUnauthorized: false,
   },
-  connectionLimit: 1,
+  connectionLimit: 5,
   connectTimeout: 20_000,
   acquireTimeout: 20_000,
 });

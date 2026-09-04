@@ -5,10 +5,16 @@ import { useContext } from "react";
 import { House, Mail, Bell, User, SquarePen } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";    
+import { useUser } from "@clerk/nextjs";
 
 const Sidebar = () => {
   const { openCreatePost } = useContext(AppContext)!;
   const pathname = usePathname();
+
+  const { user, isLoaded } = useUser();
+
+  const username = user?.username;
+
   return (
     <aside className="
     fixed z-50 bg-background border-foreground text-foreground
@@ -47,13 +53,15 @@ const Sidebar = () => {
         />
       </Link>
 
-      <Link href="/kelly">
-        <User
-          size={32}
-          className="md:w-11.25 md:h-11.25"
-          fill={pathname.startsWith("/kelly") ? "currentColor" : "none"}
-        />
-      </Link>
+      {isLoaded && username && (
+        <Link href={`/${username}`}>
+          <User
+            size={32}
+            className="md:w-11.25 md:h-11.25"
+            fill={pathname.startsWith(`/${username}`) ? "currentColor" : "none"}
+          />
+        </Link>
+      )}
       <button onClick={openCreatePost} aria-label="Create post" className="text-foreground hover:cursor-pointer">
         <SquarePen size={32}
           className="md:w-11.25 md:h-11.25" />
