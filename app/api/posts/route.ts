@@ -29,7 +29,7 @@ export async function GET(request: NextRequest) {
                     followingId: true,
                   },
                 })
-              ).map((follow) => follow.followingId),
+              ).map((follow: { followingId: string }) => follow.followingId),
             ],
           },
         };
