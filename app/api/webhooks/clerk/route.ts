@@ -6,6 +6,10 @@ export async function POST(req: NextRequest) {
   try {
     const evt = await verifyWebhook(req);
 
+    console.log("===== CLERK WEBHOOK =====");
+    console.log("EVENT:", evt.type);
+    console.log("USER ID:", evt.data.id);
+
     // Do something with payload
     // For this guide, log payload to console
     const { id } = evt.data;
@@ -16,6 +20,7 @@ export async function POST(req: NextRequest) {
     // console.log("Webhook payload:", evt.data);
 
     if (eventType === "user.created") {
+      console.log("EMAILS:", evt.data.email_addresses);
       try {
         await prisma.user.create({
           data: {
