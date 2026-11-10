@@ -1,6 +1,6 @@
 'use client'
 
-import { useSignUp } from '@clerk/nextjs'
+import { useSignUp, useSignIn } from '@clerk/nextjs'
 import { Loader2 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
@@ -10,6 +10,7 @@ export default function Page() {
   // Use `useSignUp()` hook to access the `SignUp` object
   // `missing_requirements` and `missingFields` are only available on the `SignUp` object
   const { signUp } = useSignUp()
+  const { signIn } = useSignIn()
   const [isLoading, setIsLoading] = useState(false)
 
   const handleSubmit = async (formData: FormData) => {
@@ -55,10 +56,10 @@ export default function Page() {
 
   // If the sign-up is complete, the user shouldn't be on this page
   useEffect(() => {
-  if (signUp.status === 'complete') {
+  if (signUp.status || signIn.status === 'complete') {
     router.replace("/");
   }
-}, [signUp.status, router]);
+}, [signUp, signIn, router]);
 
 useEffect(() => {
   console.log('SIGN UP STATUS:', signUp?.status)

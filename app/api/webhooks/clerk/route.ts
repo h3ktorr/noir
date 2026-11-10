@@ -5,6 +5,7 @@ import { NextRequest } from "next/server";
 export async function POST(req: NextRequest) {
   try {
     const evt = await verifyWebhook(req);
+    // const evt = await req.json();
 
     console.log("===== CLERK WEBHOOK =====");
     console.log("EVENT:", evt.type);
@@ -20,20 +21,53 @@ export async function POST(req: NextRequest) {
     // console.log("Webhook payload:", evt.data);
 
     if (eventType === "user.created") {
-      console.log("EMAILS:", evt.data.email_addresses);
+      const primaryEmail =
+        evt.data.email_addresses.find(
+          (email: { id: string }) =>
+            email.id === evt.data.primary_email_address_id,
+        )?.email_address ?? evt.data.email_addresses[0]?.email_address;
+
+      const username = evt.data.username;
+
+      if (!primaryEmail || !username) {
+        console.error("Missing required user information:", {
+          userId: evt.data.id,
+          primaryEmail,
+          username,
+        });
+
+        return new Response("Missing email or username", {
+          status: 400,
+        });
+      }
+
       try {
-        await prisma.user.create({
-          data: {
+        await prisma.user.upsert({
+          where: {
             id: evt.data.id,
-            email: evt.data.email_addresses[0].email_address,
-            username: evt.data.username!,
-            displayName: evt.data.first_name + " " + evt.data.last_name,
+          },
+          update: {
+            email: primaryEmail,
+            username,
+            displayName:
+              `${evt.data.first_name ?? ""} ${evt.data.last_name ?? ""}`.trim(),
+          },
+          create: {
+            id: evt.data.id,
+            email: primaryEmail,
+            username,
+            displayName:
+              `${evt.data.first_name ?? ""} ${evt.data.last_name ?? ""}`.trim(),
           },
         });
+
+        console.log("User successfully created in database!");
+
         return new Response("User created", { status: 200 });
       } catch (error) {
-        console.log(error);
-        return new Response("Error: Failed to create a user", { status: 500 });
+        console.error("Prisma error:", error);
+
+        return new Response("Failed to create user", { status: 500 });
       }
     }
 
