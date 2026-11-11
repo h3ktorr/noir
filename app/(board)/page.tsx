@@ -1,5 +1,6 @@
 import Feed from "@/components/Feed";
 import Recommendation from "@/components/Recommendation";
+import Socket from "@/components/Socket";
 import Stories from "@/components/Stories";
 
 export default function Home() {
@@ -12,6 +13,7 @@ export default function Home() {
           <Recommendation />
         </div>
       </div>
+      <Socket />
     </div>
   );
 }
