@@ -4,7 +4,7 @@ import { auth } from "@clerk/nextjs/server";
 import prisma from "./lib/prisma";
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
-import ably from "./lib/ably";
+import { getIO } from "./lib/socket-server";
 
 export const followUser = async (targetUserId: string) => {
   const { userId } = await auth();
@@ -37,13 +37,16 @@ export const likePost = async (postId: number) => {
   const { userId } = await auth();
   if (!userId) return;
 
-  const existingLike = await prisma.like.findFirst({
+  const existingLike = await prisma.like.findUnique({
     where: {
-      userId,
-      postId,
+      userId_postId: {
+        userId,
+        postId,
+      },
     },
   });
 
+  // Unlike: remove the like and do not create a notification
   if (existingLike) {
     await prisma.like.delete({
       where: {
@@ -55,30 +58,21 @@ export const likePost = async (postId: number) => {
   }
 
   const post = await prisma.post.findUnique({
-    where: {
-      id: postId,
-    },
+    where: { id: postId },
     select: {
       userId: true,
+      user: {
+        select: {
+          username: true,
+        },
+      },
     },
   });
 
   if (!post) return;
 
-  await prisma.like.create({
-    data: {
-      userId,
-      postId,
-    },
-  });
-
-  // Don't notify yourself when you like your own post
-  if (post.userId === userId) return;
-
   const sender = await prisma.user.findUnique({
-    where: {
-      id: userId,
-    },
+    where: { id: userId },
     select: {
       username: true,
     },
@@ -86,14 +80,40 @@ export const likePost = async (postId: number) => {
 
   if (!sender) return;
 
-  const channel = ably.channels.get(`notifications:${post.userId}`);
+  // Create the like and notification together
+  const notification = await prisma.$transaction(async (tx) => {
+    await tx.like.create({
+      data: {
+        userId,
+        postId,
+      },
+    });
 
-  await channel.publish("notification", {
-    id: crypto.randomUUID(),
-    senderUsername: sender.username,
-    type: "like",
-    link: `/${sender.username}/status/${postId}`,
+    // Do not notify someone when they like their own post
+    if (post.userId === userId) return null;
+
+    return tx.notification.create({
+      data: {
+        senderId: userId,
+        recipientId: post.userId,
+        type: "LIKE",
+        link: `/${post.user.username}/status/${postId}`,
+        postId,
+      },
+    });
   });
+
+  // Send the notification to the recipient's Socket.IO room
+  if (notification) {
+    getIO()?.to(`user:${post.userId}`).emit("getNotification", {
+      id: notification.id,
+      senderUsername: sender.username,
+      type: "like",
+      link: notification.link,
+      createdAt: notification.createdAt,
+      read: notification.read,
+    });
+  }
 };
 
 export const repostPost = async (postId: number) => {

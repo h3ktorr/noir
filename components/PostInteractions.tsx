@@ -1,17 +1,20 @@
 "use client"
 
 import { likePost, repostPost, savePost } from "@/action";
+import { socket } from "@/socket";
 import { useUser } from "@clerk/nextjs";
 import { Bookmark, Heart, MessageCircle, Repeat2 } from "lucide-react"
 import { useOptimistic, useState } from "react";
 
-const PostInteractions = ({count, isLiked, isReposted, isSaved, comment, postId }: {
+const PostInteractions = ({count, isLiked, isReposted, isSaved, comment, postId, username, userId }: {
   count: {likes: number; rePosts: number; comments: number};
   isLiked: boolean;
   isReposted: boolean;
   isSaved: boolean;
   comment?: boolean;
   postId: number;
+  username: string;
+  userId: string;
 }) => {
   const likes = count.likes ?? 0;
   const rePosts = count.rePosts ?? 0;
@@ -26,19 +29,40 @@ const PostInteractions = ({count, isLiked, isReposted, isSaved, comment, postId 
   })
 
   const { user } = useUser();
+  
+  
+const likeAction = async () => {
+  if (!user) return;
 
-  const likeAction = async () => {
+  const wasLiked = state.isLiked;
 
-    if(!user) return
+  // Optimistically update the UI
+  addOptimisticCount("like");
 
-    addOptimisticCount("like");
-    await likePost(postId);
-    setState((prev) => ({
-      ...prev,
-      likes: prev.isLiked ? prev.likes - 1 : prev.likes + 1,
-      isLiked: !prev.isLiked,
-    }));
-  };
+  // Save the like/unlike in the database
+  await likePost(postId);
+
+  // Update local state
+  setState((prev) => ({
+    ...prev,
+    likes: prev.isLiked ? prev.likes - 1 : prev.likes + 1,
+    isLiked: !prev.isLiked,
+  }));
+
+  // Only notify when a new like is created
+  // Don't notify when someone removes their like
+  if (!wasLiked && userId !== user.id) {
+    socket.emit("sendNotification", {
+      receiverId: userId,
+      data: {
+        senderUsername: user.username ?? "Someone",
+        type: "like",
+        link: `/${username}/status/${postId}`,
+      },
+    });
+  }
+};
+
 
   const repostAction = async () => {
     addOptimisticCount("repost");

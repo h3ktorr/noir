@@ -5,42 +5,35 @@ import { Server } from "socket.io";
 const dev = process.env.NODE_ENV !== "production";
 const hostname = "localhost";
 const port = 3000;
-// when using middleware `hostname` and `port` must be provided below
+
 const app = next({ dev, hostname, port });
 const handler = app.getRequestHandler();
-
-let onlineUsers = [];
-
-const addUser = (username, socketId) => {
-  const userExists = onlineUsers.find((user) => user.socketId === socketId);
-
-  if (!userExists) {
-    onlineUsers.push(username + "added", socketId);
-  }
-  console.log("Online Users:", onlineUsers);
-};
-
-const removeUser = (socketId) => {
-  onlineUsers = onlineUsers.filter((user) => user.socketId !== socketId);
-  console.log("user removed. Online Users:", onlineUsers);
-};
-
-const getUser = (username) => {
-  return onlineUsers.find((user) => user.username === username);
-};
 
 app.prepare().then(() => {
   const httpServer = createServer(handler);
 
-  const io = new Server(httpServer);
+  const io = new Server(httpServer, {
+    cors: {
+      origin: dev ? "http://localhost:3000" : process.env.CLIENT_URL,
+      methods: ["GET", "POST"],
+    },
+  });
+
+  global.io = io;
 
   io.on("connection", (socket) => {
-    socket.on("addUser", (username) => {
-      addUser(username, socket.id);
+    console.log("User connected:", socket.id);
+
+    socket.on("register", (userId) => {
+      socket.join(`user:${userId}`);
+
+      console.log(`User registered: ${userId}`);
+      console.log(`Joined room: user:${userId}`);
     });
+    console.log("User connected:", socket.id);
 
     socket.on("disconnect", () => {
-      removeUser(socket.id);
+      console.log("User disconnected:", socket.id);
     });
   });
 

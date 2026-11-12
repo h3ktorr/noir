@@ -4,6 +4,7 @@ import { Nunito } from "next/font/google";
 import AppContextProvider from "@/context/AppContext";
 import { ClerkProvider } from '@clerk/nextjs';
 import QueryProvider from "@/providers/QueryProvider";
+import SocketProvider from "@/components/SocketProvider";
 
 const nunito = Nunito({
   subsets: ["latin"],
@@ -27,9 +28,11 @@ export default function RootLayout({
       <QueryProvider>
         <html lang="en" className={nunito.variable}>
           <AppContextProvider>
-            <body className="flex h-screen">
-              {children}
-            </body>
+            <SocketProvider>
+              <body className="flex h-screen">
+                {children}
+              </body>
+            </SocketProvider>
           </AppContextProvider>
         </html>
       </QueryProvider>

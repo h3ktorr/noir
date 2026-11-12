@@ -1,35 +1,44 @@
 "use client";
 
 import ImageComp from "@/components/ImageComp";
-import { getAblyClient } from "@/lib/ably-client";
+import { socket } from "@/socket";
 import { useEffect, useState } from "react";
-import type * as Ably from "ably";
 
 type NotificationType = {
   id: string;
   senderUsername: string;
   type: "like" | "comment" | "rePost" | "follow";
   link: string;
+  read: boolean;
+  createdAt: string;
 };
 
-const NotificationsClient = ({ userId }: { userId: string }) => {
-  const [notifications, setNotifications] = useState<NotificationType[]>([]);
+const NotificationsClient = ({
+  userId,
+  initialNotifications,
+}: {
+  userId: string;
+  initialNotifications: NotificationType[];
+}) => {
+  const [notifications, setNotifications] =
+    useState<NotificationType[]>(initialNotifications);
 
   useEffect(() => {
-    const ably = getAblyClient();
+    const handleNotification = (notification: NotificationType) => {
+      setNotifications((prev) => {
+        // Prevent duplicate notifications
+        if (prev.some((item) => item.id === notification.id)) {
+          return prev;
+        }
 
-    const channel = ably.channels.get(`notifications:${userId}`);
-
-    const handleNotification = (message: Ably.Message) => {
-      const notification = message.data as NotificationType;
-
-      setNotifications((prev) => [notification, ...prev]);
+        return [notification, ...prev];
+      });
     };
 
-    channel.subscribe("notification", handleNotification);
+    socket.on("getNotification", handleNotification);
 
     return () => {
-      channel.unsubscribe("notification", handleNotification);
+      socket.off("getNotification", handleNotification);
     };
   }, [userId]);
 
@@ -43,35 +52,41 @@ const NotificationsClient = ({ userId }: { userId: string }) => {
       </div>
 
       <div>
-        {notifications.map((n) => (
-          <div className="p-4" key={n.id}>
-            <div className="flex items-center space-x-3">
-              <ImageComp
-                src="general/noAvatar.png"
-                alt=""
-                w={40}
-                h={40}
-                className="rounded-full"
-              />
+        {notifications.length === 0 ? (
+          <p className="mt-6 text-sm text-gray-500">
+            You don't have any notifications yet.
+          </p>
+        ) : (
+          notifications.map((n) => (
+            <div className="p-4" key={n.id}>
+              <div className="flex items-center space-x-3">
+                <ImageComp
+                  src="general/noAvatar.png"
+                  alt=""
+                  w={40}
+                  h={40}
+                  className="rounded-full"
+                />
 
-              <div>
-                <p className="font-semibold">
-                  {n.senderUsername}
+                <div>
+                  <p className="font-semibold">
+                    {n.senderUsername}
 
-                  <span className="ml-2 text-sm text-gray-400">
-                    {n.type === "like"
-                      ? "Liked your post"
-                      : n.type === "rePost"
-                        ? "re-posted your post"
-                        : n.type === "comment"
-                          ? "replied to your post"
-                          : "followed you"}
-                  </span>
-                </p>
+                    <span className="ml-2 text-sm text-gray-400">
+                      {n.type === "like"
+                        ? "Liked your post"
+                        : n.type === "rePost"
+                          ? "re-posted your post"
+                          : n.type === "comment"
+                            ? "replied to your post"
+                            : "followed you"}
+                    </span>
+                  </p>
+                </div>
               </div>
             </div>
-          </div>
-        ))}
+          ))
+        )}
       </div>
     </div>
   );
