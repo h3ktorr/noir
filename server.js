@@ -4,7 +4,7 @@ import { Server } from "socket.io";
 
 const dev = process.env.NODE_ENV !== "production";
 const hostname = "localhost";
-const port = 3000;
+const port = 3100;
 
 const app = next({ dev, hostname, port });
 const handler = app.getRequestHandler();
@@ -14,7 +14,7 @@ app.prepare().then(() => {
 
   const io = new Server(httpServer, {
     cors: {
-      origin: dev ? "http://localhost:3000" : process.env.CLIENT_URL,
+      origin: dev ? "http://localhost:3100" : process.env.CLIENT_URL,
       methods: ["GET", "POST"],
     },
   });

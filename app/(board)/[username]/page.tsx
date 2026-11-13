@@ -116,7 +116,7 @@ const page = async ({params}:{params: Promise< {username: string} >}) => {
           <div className="flex gap-6 text-sm">
             <div className="flex items-center gap-1">
               <span className="font-semibold">
-                {user._count.followers}
+                {user._count.following}
               </span>
               <span className="text-foreground/60">
                 Followers
@@ -125,7 +125,7 @@ const page = async ({params}:{params: Promise< {username: string} >}) => {
 
             <div className="flex items-center gap-1">
               <span className="font-semibold">
-                {user._count.following}
+                {user._count.followers}
               </span>
               <span className="text-foreground/60">
                 Following
