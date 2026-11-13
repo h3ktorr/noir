@@ -2,10 +2,11 @@
 "use client";
 
 import ImageComp from "@/components/ImageComp";
-import { markNotificationAsRead } from "@/action";
+import { markNotificationAsRead, markAllNotificationsAsRead } from "@/action";
 import { socket } from "@/socket";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { formatDistanceToNow } from "date-fns";
 
 type NotificationType = {
   id: string;
@@ -77,16 +78,46 @@ const NotificationsClient = ({
     router.push(notification.link);
   };
 
+  const handleMarkAllAsRead = async () => {
+    if (unreadCount === 0) return;
+
+    try {
+      const result = await markAllNotificationsAsRead();
+
+      if (result.success) {
+        setNotifications((prev) =>
+          prev.map((n) => ({ ...n, read: true })),
+        );
+
+        window.dispatchEvent(new Event("notificationsRead"));
+      }
+    } catch (error) {
+      console.error("Failed to mark all notifications as read:", error);
+    }
+  };
+
   return (
     <div className="p-4">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">Notifications</h1>
 
-        {unreadCount > 0 && (
-          <span className="rounded-full bg-blue-500 px-3 py-1 text-xs font-semibold text-white">
-            {unreadCount} unread
-          </span>
-        )}
+        <div className="flex items-center gap-3">
+          {unreadCount > 0 && (
+            <>
+              <span className="rounded-full bg-blue-500 px-3 py-1 text-xs font-semibold text-white">
+                {unreadCount} unread
+              </span>
+
+              <button
+                type="button"
+                onClick={handleMarkAllAsRead}
+                className="cursor-pointer text-sm font-semibold text-blue-500 hover:text-blue-600"
+              >
+                Mark all as read
+              </button>
+            </>
+          )}
+        </div>
       </div>
 
       {/* Filters */}
@@ -153,6 +184,12 @@ const NotificationsClient = ({
                           ? "commented on your post"
                           : "followed you"}
                   </span>
+                </p>
+
+                <p className="mt-1 text-xs text-gray-500">
+                  {formatDistanceToNow(new Date(n.createdAt), {
+                    addSuffix: true,
+                  })}
                 </p>
               </div>
 

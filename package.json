@@ -9,6 +9,7 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@clerk/backend": "^3.28.0",
     "@clerk/nextjs": "^7.0.12",
     "@clerk/types": "^4.101.22",
     "@imagekit/next": "^2.1.3",

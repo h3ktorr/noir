@@ -1,6 +1,7 @@
 import { createServer } from "node:http";
 import next from "next";
 import { Server } from "socket.io";
+import { verifyToken } from "@clerk/backend";
 
 const dev = process.env.NODE_ENV !== "production";
 const hostname = "localhost";
@@ -19,21 +20,56 @@ app.prepare().then(() => {
     },
   });
 
+  // Authenticate every Socket.IO connection using a Clerk session token
+  io.use(async (socket, next) => {
+    try {
+      const token = socket.handshake.auth?.token;
+      const secretKey = process.env.CLERK_SECRET_KEY;
+
+      if (!token || typeof token !== "string") {
+        return next(new Error("Authentication required"));
+      }
+
+      if (!secretKey) {
+        return next(new Error("Clerk secret key is missing"));
+      }
+
+      const verifiedToken = await verifyToken(token, {
+        secretKey,
+        authorizedParties: [
+          "http://localhost:3100",
+          process.env.CLIENT_URL,
+        ].filter(Boolean),
+      });
+
+      if (!verifiedToken.sub) {
+        return next(new Error("Invalid user identity"));
+      }
+
+      // Store the verified Clerk user ID on the socket
+      socket.data.userId = verifiedToken.sub;
+
+      next();
+    } catch (error) {
+      console.error("Socket authentication failed:", error);
+      next(new Error("Unauthorized"));
+    }
+  });
+
   global.io = io;
 
   io.on("connection", (socket) => {
-    console.log("User connected:", socket.id);
+    // This ID comes from the verified Clerk token
+    const userId = socket.data.userId;
 
-    socket.on("register", (userId) => {
-      socket.join(`user:${userId}`);
+    // Automatically join the authenticated user's private room
+    socket.join(`user:${userId}`);
 
-      console.log(`User registered: ${userId}`);
-      console.log(`Joined room: user:${userId}`);
-    });
-    console.log("User connected:", socket.id);
+    console.log("Authenticated user connected:", userId);
+    console.log(`Joined room: user:${userId}`);
 
     socket.on("disconnect", () => {
-      console.log("User disconnected:", socket.id);
+      console.log("User disconnected:", userId);
     });
   });
 

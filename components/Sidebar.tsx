@@ -21,7 +21,8 @@ const Sidebar = () => {
   useEffect(() => {
     if (!isLoaded || !user) return;
 
-    // Fetch the existing unread count
+    let cancelled = false;
+
     const fetchUnreadCount = async () => {
       try {
         const response = await fetch("/api/notifications/unread");
@@ -29,7 +30,10 @@ const Sidebar = () => {
         if (!response.ok) return;
 
         const data = await response.json();
-        setUnreadCount(data.count);
+
+        if (!cancelled) {
+          setUnreadCount(data.count);
+        }
       } catch (error) {
         console.error("Failed to fetch unread notifications:", error);
       }
@@ -37,7 +41,6 @@ const Sidebar = () => {
 
     fetchUnreadCount();
 
-    // Listen for new real-time notifications
     const handleNotification = (notification: {
       id: string;
       read: boolean;
@@ -47,24 +50,28 @@ const Sidebar = () => {
       }
     };
 
-    // Listen when a notification is marked as read
     const handleNotificationRead = () => {
       setUnreadCount((prev) => Math.max(0, prev - 1));
     };
 
+    const handleAllNotificationsRead = () => {
+      setUnreadCount(0);
+    };
+
     socket.on("getNotification", handleNotification);
 
-    window.addEventListener(
-      "notificationRead",
-      handleNotificationRead,
-    );
+    window.addEventListener("notificationRead", handleNotificationRead);
+    window.addEventListener("notificationsRead", handleAllNotificationsRead);
 
     return () => {
+      cancelled = true;
+
       socket.off("getNotification", handleNotification);
 
+      window.removeEventListener("notificationRead", handleNotificationRead);
       window.removeEventListener(
-        "notificationRead",
-        handleNotificationRead,
+        "notificationsRead",
+        handleAllNotificationsRead,
       );
     };
   }, [user, isLoaded]);

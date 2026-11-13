@@ -448,3 +448,25 @@ export const markNotificationAsRead = async (notificationId: string) => {
     return { success: false };
   }
 };
+
+export const markAllNotificationsAsRead = async () => {
+  const { userId } = await auth();
+
+  if (!userId) {
+    throw new Error("Unauthorized");
+  }
+
+  await prisma.notification.updateMany({
+    where: {
+      recipientId: userId,
+      read: false,
+    },
+    data: {
+      read: true,
+    },
+  });
+
+  revalidatePath("/notifications");
+
+  return { success: true };
+};
