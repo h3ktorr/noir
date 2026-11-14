@@ -6,6 +6,9 @@ import prisma from "@/lib/prisma";
 import { notFound } from "next/navigation";
 import { auth } from "@clerk/nextjs/server";
 import FollowButton from "@/components/FollowButton";
+import EditProfile from "@/components/EditProfile";
+import ProfileActions from "@/components/ProfileActions";
+import { getBlockStatus } from "@/action";
 
 const page = async ({params}:{params: Promise< {username: string} >}) => {
     const { username } = await params;
@@ -29,6 +32,12 @@ const page = async ({params}:{params: Promise< {username: string} >}) => {
   })
 
   if(!user) return notFound()
+
+  const isOwnProfile = userId === user.id;
+
+  const blockStatus = userId && !isOwnProfile
+    ? await getBlockStatus(user.id)
+    : { isBlockedByMe: false, hasBlockedMe: false };
 
   return (
     <div className="w-full">
@@ -74,9 +83,28 @@ const page = async ({params}:{params: Promise< {username: string} >}) => {
               <h1 className="text-xl lg:text-2xl font-bold leading-tight">
                 {user.displayName}
               </h1>
-              <div className="flex gap-4">
-                <LogoutButton />
-                <FollowButton userId={user.id} isFollowed={!!user.following.length} />
+              <div className="flex gap-3 items-center">
+                {userId === user.id ? (
+                  <>
+                    <EditProfile user={user} />
+                    <LogoutButton />
+                  </>
+                ) : (
+                  <>
+                    <ProfileActions
+                      userId={user.id}
+                      username={user.username}
+                      isBlocked={blockStatus.isBlockedByMe}
+                    />
+
+                    {!blockStatus.isBlockedByMe && !blockStatus.hasBlockedMe && (
+                      <FollowButton
+                        userId={user.id}
+                        isFollowed={!!user.following.length}
+                      />
+                    )}
+                  </>
+                )}
               </div>
             </div>
             <p className="text-foreground/60 text-sm">
@@ -135,7 +163,18 @@ const page = async ({params}:{params: Promise< {username: string} >}) => {
 
         </div>
       </div>
-      <Feed userProfileId={user.id} />
+      {blockStatus.hasBlockedMe && (
+        <div className="mx-auto max-w-xl px-6 py-12 text-center">
+          <h2 className="text-xl font-semibold">Profile unavailable</h2>
+          <p className="mt-2 text-sm text-foreground/60">
+            This profile isn't available to you.
+          </p>
+        </div>
+      )}
+
+      {!blockStatus.hasBlockedMe && (
+        <Feed userProfileId={user.id} />
+      )}
     </div>
   )
 }

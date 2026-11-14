@@ -5,15 +5,27 @@ import InfiniteScroll from "react-infinite-scroll-component";
 import Post from "./Post";
 
 const fetchPosts = async (pageParam: number, userProfileId?: string) => {
-  const res = await fetch("/api/posts?cursor="+pageParam+"&user="+userProfileId)
-  if(!res.ok) throw new Error('Network response was not ok')
-  return res.json()
-}
+  const params = new URLSearchParams({
+    cursor: String(pageParam),
+  });
+
+  if (userProfileId) {
+    params.set("user", userProfileId);
+  }
+
+  const res = await fetch(`/api/posts?${params.toString()}`);
+
+  if (!res.ok) {
+    throw new Error("Network response was not ok");
+  }
+
+  return res.json();
+};
 
 const InfiniteFeed = ({userProfileId}: {userProfileId?: string}) => {
 
   const {data, error, status, hasNextPage, fetchNextPage} = useInfiniteQuery({
-    queryKey: ['posts'],
+    queryKey: ['posts', userProfileId ?? "home"],
     queryFn: ({pageParam = 2}) => fetchPosts(pageParam, userProfileId),
     initialPageParam: 2,
     getNextPageParam: (lastPage, allPages) => {

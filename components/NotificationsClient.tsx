@@ -2,15 +2,24 @@
 "use client";
 
 import ImageComp from "@/components/ImageComp";
-import { markNotificationAsRead, markAllNotificationsAsRead } from "@/action";
+import {
+  markNotificationAsRead,
+  markAllNotificationsAsRead,
+} from "@/action";
 import { socket } from "@/socket";
-import { useEffect, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import { useRouter } from "next/navigation";
 import { formatDistanceToNow } from "date-fns";
 
 type NotificationType = {
   id: string;
   senderUsername: string;
+  senderImg: string | null;
   type: "like" | "comment" | "rePost" | "follow";
   link: string;
   read: boolean;
@@ -20,14 +29,30 @@ type NotificationType = {
 const NotificationsClient = ({
   userId,
   initialNotifications,
+  initialHasMore,
 }: {
   userId: string;
   initialNotifications: NotificationType[];
+  initialHasMore: boolean;
 }) => {
   const [notifications, setNotifications] =
     useState<NotificationType[]>(initialNotifications);
 
-  const [activeTab, setActiveTab] = useState<"all" | "unread">("all");
+  const [activeTab, setActiveTab] =
+    useState<"all" | "unread">("all");
+
+  const [cursor, setCursor] = useState<string | null>(
+    initialNotifications.length > 0
+      ? initialNotifications[initialNotifications.length - 1].id
+      : null,
+  );
+
+  const [hasMore, setHasMore] = useState(initialHasMore);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [loadMoreError, setLoadMoreError] = useState(false);
+
+  const loadingRef = useRef(false);
+  const loadMoreRef = useRef<HTMLDivElement | null>(null);
 
   const router = useRouter();
 
@@ -39,6 +64,86 @@ const NotificationsClient = ({
     activeTab === "unread"
       ? notifications.filter((n) => !n.read)
       : notifications;
+
+  // Load older notifications
+  const loadMoreNotifications = useCallback(async () => {
+    if (!cursor || !hasMore || loadingRef.current) return;
+
+    loadingRef.current = true;
+    setIsLoadingMore(true);
+    setLoadMoreError(false);
+
+    try {
+      const response = await fetch(
+        `/api/notifications?cursor=${encodeURIComponent(cursor)}`,
+      );
+
+      if (!response.ok) {
+        throw new Error("Failed to load more notifications");
+      }
+
+      const data = await response.json();
+
+      setNotifications((prev) => {
+        const existingIds = new Set(prev.map((n) => n.id));
+
+        const newNotifications = data.notifications.filter(
+          (n: NotificationType) => !existingIds.has(n.id),
+        );
+
+        return [...prev, ...newNotifications];
+      });
+
+      setCursor(data.nextCursor);
+      setHasMore(data.hasMore);
+    } catch (error) {
+      console.error("Error loading notifications:", error);
+      setLoadMoreError(true);
+    } finally {
+      loadingRef.current = false;
+      setIsLoadingMore(false);
+    }
+  }, [cursor, hasMore]);
+
+  // Automatically load more when reaching the bottom
+  useEffect(() => {
+    const element = loadMoreRef.current;
+
+    if (!element || !hasMore) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) {
+          loadMoreNotifications();
+        }
+      },
+      {
+        rootMargin: "200px",
+      },
+    );
+
+    observer.observe(element);
+
+    return () => observer.disconnect();
+  }, [hasMore, loadMoreNotifications]);
+
+  // Keep searching older pages when the Unread filter has no results
+  useEffect(() => {
+    if (
+      activeTab === "unread" &&
+      filteredNotifications.length === 0 &&
+      hasMore &&
+      !isLoadingMore
+    ) {
+      loadMoreNotifications();
+    }
+  }, [
+    activeTab,
+    filteredNotifications.length,
+    hasMore,
+    isLoadingMore,
+    loadMoreNotifications,
+  ]);
 
   // Listen for new real-time notifications
   useEffect(() => {
@@ -60,7 +165,9 @@ const NotificationsClient = ({
   }, [userId]);
 
   // Mark notification as read and navigate
-  const handleNotificationClick = async (notification: NotificationType) => {
+  const handleNotificationClick = async (
+    notification: NotificationType,
+  ) => {
     if (!notification.read) {
       const result = await markNotificationAsRead(notification.id);
 
@@ -78,6 +185,7 @@ const NotificationsClient = ({
     router.push(notification.link);
   };
 
+  // Mark all notifications as read
   const handleMarkAllAsRead = async () => {
     if (unreadCount === 0) return;
 
@@ -164,8 +272,8 @@ const NotificationsClient = ({
               }`}
             >
               <ImageComp
-                src="general/noAvatar.png"
-                alt=""
+                src={n.senderImg || "general/noAvatar.png"}
+                alt={`${n.senderUsername}'s profile picture`}
                 w={40}
                 h={40}
                 className="rounded-full"
@@ -200,6 +308,42 @@ const NotificationsClient = ({
           ))
         )}
       </div>
+
+      {/* Infinite scroll trigger */}
+      {hasMore && (
+        <div
+          ref={loadMoreRef}
+          className="flex flex-col items-center gap-3 py-6"
+        >
+          {isLoadingMore && (
+            <p className="text-sm text-gray-500">
+              Loading more notifications...
+            </p>
+          )}
+
+          {loadMoreError && (
+            <p className="text-sm text-red-500">
+              Could not load more notifications.
+            </p>
+          )}
+
+          {!isLoadingMore && (
+            <button
+              type="button"
+              onClick={loadMoreNotifications}
+              className="cursor-pointer text-sm font-semibold text-blue-500 hover:text-blue-600"
+            >
+              {loadMoreError ? "Try again" : "Load more"}
+            </button>
+          )}
+        </div>
+      )}
+
+      {!hasMore && notifications.length > 0 && (
+        <p className="py-6 text-center text-sm text-gray-500">
+          You're all caught up.
+        </p>
+      )}
     </div>
   );
 };

@@ -1,3 +1,4 @@
+
 import { auth } from "@clerk/nextjs/server";
 import NotificationsClient from "@/components/NotificationsClient";
 import prisma from "@/lib/prisma";
@@ -15,18 +16,24 @@ const Page = async () => {
       sender: {
         select: {
           username: true,
+          img: true,
         },
       },
     },
-    orderBy: {
-      createdAt: "desc",
-    },
-    take: 50,
+    orderBy: [
+      { createdAt: "desc" },
+      { id: "desc" },
+    ],
+    take: 21,
   });
 
-  const notifications = records.map((notification) => ({
+  const hasMore = records.length > 20;
+  const initialRecords = records.slice(0, 20);
+
+  const notifications = initialRecords.map((notification) => ({
     id: notification.id,
     senderUsername: notification.sender.username,
+    senderImg: notification.sender.img,
     type:
       notification.type === "LIKE"
         ? ("like" as const)
@@ -44,6 +51,7 @@ const Page = async () => {
     <NotificationsClient
       userId={userId}
       initialNotifications={notifications}
+      initialHasMore={hasMore}
     />
   );
 };

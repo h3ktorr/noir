@@ -1,0 +1,165 @@
+noir/
+|-- actions
+|   |-- createPost.ts
+|   |-- fetchPost.ts
+|   \-- getFileDetails.ts
+|-- app
+|   |-- (board)
+|   |   |-- @modal
+|   |   |   |-- compose
+|   |   |   |   \-- post
+|   |   |   |       \-- page.tsx
+|   |   |   \-- default.tsx
+|   |   |-- [username]
+|   |   |   |-- status
+|   |   |   |   \-- [postid]
+|   |   |   |       \-- page.tsx
+|   |   |   \-- page.tsx
+|   |   |-- messages
+|   |   |   \-- page.tsx
+|   |   |-- notifications
+|   |   |   \-- page.tsx
+|   |   |-- layout.tsx
+|   |   \-- page.tsx
+|   |-- api
+|   |   |-- notifications
+|   |   |   |-- unread
+|   |   |   |   \-- route.ts
+|   |   |   \-- route.ts
+|   |   |-- posts
+|   |   |   \-- route.ts
+|   |   |-- upload-auth
+|   |   |   \-- route.ts
+|   |   \-- webhooks
+|   |       \-- clerk
+|   |           \-- route.ts
+|   |-- generated
+|   |   \-- prisma
+|   |       |-- runtime
+|   |       |   |-- client.d.ts
+|   |       |   |-- client.js
+|   |       |   |-- index-browser.d.ts
+|   |       |   |-- index-browser.js
+|   |       |   \-- wasm-compiler-edge.js
+|   |       |-- client.d.ts
+|   |       |-- client.js
+|   |       |-- default.d.ts
+|   |       |-- default.js
+|   |       |-- edge.d.ts
+|   |       |-- edge.js
+|   |       |-- index.d.ts
+|   |       |-- index.js
+|   |       |-- index-browser.js
+|   |       |-- package.json
+|   |       |-- query_compiler_fast_bg.js
+|   |       |-- query_compiler_fast_bg.wasm
+|   |       |-- query_compiler_fast_bg.wasm-base64.js
+|   |       |-- schema.prisma
+|   |       |-- wasm-edge-light-loader.mjs
+|   |       \-- wasm-worker-loader.mjs
+|   |-- onboarding
+|   |-- sign-in
+|   |   |-- [[...sign-in]]
+|   |   |   \-- page.tsx
+|   |   |-- continue
+|   |   |   \-- page.tsx
+|   |   \-- tasks
+|   |-- sign-up
+|   |   \-- [[...sign-up]]
+|   |       \-- page.tsx
+|   |-- sso-callback
+|   |   \-- page.tsx
+|   |-- favicon.ico
+|   |-- globals.css
+|   \-- layout.tsx
+|-- assets
+|   |-- dummydata.ts
+|   |-- profile-1.jpg
+|   |-- profile-2.jpg
+|   |-- profile-3.jpg
+|   |-- profile-4.jpg
+|   |-- profile-5.jpg
+|   |-- profile-6.jpg
+|   |-- story-1.jpg
+|   |-- story-2.jpg
+|   |-- story-3.jpg
+|   |-- story-4.jpg
+|   |-- story-5.jpg
+|   |-- story-6.jpg
+|   \-- story-7.jpg
+|-- components
+|   |-- AllMessages.tsx
+|   |-- Comments.tsx
+|   |-- CompleteSignup.tsx
+|   |-- CreatePost.tsx
+|   |-- Feed.tsx
+|   |-- FollowButton.tsx
+|   |-- Footer.tsx
+|   |-- ImageComp.tsx
+|   |-- InfiniteFeed.tsx
+|   |-- LogoutButton.tsx
+|   |-- Navbar.tsx
+|   |-- NotificationsClient.tsx
+|   |-- Post.tsx
+|   |-- PostInteractions.tsx
+|   |-- Recommendation.tsx
+|   |-- Sidebar.tsx
+|   |-- SingleMessage.tsx
+|   |-- Socket.tsx
+|   |-- SocketProvider.tsx
+|   |-- Stories.tsx
+|   |-- VerifyEmail.tsx
+|   \-- VideoComp.tsx
+|-- context
+|   \-- AppContext.tsx
+|-- lib
+|   |-- prisma.ts
+|   \-- socket-server.ts
+|-- prisma
+|   |-- migrations
+|   |   |-- 20260311095843_init
+|   |   |   \-- migration.sql
+|   |   |-- 20260311101758_delete_user_name
+|   |   |   \-- migration.sql
+|   |   |-- 20260713161533_add_user_dates
+|   |   |   \-- migration.sql
+|   |   |-- 20260723164906_add_img_height
+|   |   |   \-- migration.sql
+|   |   |-- 20261112150904_add_notifications
+|   |   |   \-- migration.sql
+|   |   \-- migration_lock.toml
+|   |-- schema.prisma
+|   \-- seed.ts
+|-- providers
+|   \-- QueryProvider.tsx
+|-- public
+|   |-- dark-logo.svg
+|   |-- file.svg
+|   |-- globe.svg
+|   |-- light-logo.svg
+|   |-- next.svg
+|   |-- vercel.svg
+|   \-- window.svg
+|-- types
+|   \-- globals.d.ts
+|-- .env
+|-- .gitignore
+|-- action.ts
+|-- apply-migration.ts
+|-- check-url.ts
+|-- eslint.config.mjs
+|-- next.config.ts
+|-- next-env.d.ts
+|-- package.json
+|-- package-lock.json
+|-- postcss.config.mjs
+|-- prisma.config.ts
+|-- proxy.ts
+|-- README.md
+|-- server.js
+|-- socket.ts
+|-- test-db.ts
+|-- test-post.ts
+|-- test-url-db.ts
+|-- tsconfig.json
+\-- tsconfig.tsbuildinfo

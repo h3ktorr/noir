@@ -8,7 +8,15 @@ import { getIO } from "./lib/socket-server";
 
 export const followUser = async (targetUserId: string) => {
   const { userId } = await auth();
+
   if (!userId || userId === targetUserId) return;
+
+  const recipient = await prisma.user.findUnique({
+    where: { id: targetUserId },
+    select: { username: true },
+  });
+
+  if (!recipient) return;
 
   const existingFollow = await prisma.follow.findFirst({
     where: {
@@ -17,7 +25,7 @@ export const followUser = async (targetUserId: string) => {
     },
   });
 
-  // Unfollow: delete the relationship without notifying
+  // Unfollow
   if (existingFollow) {
     await prisma.follow.delete({
       where: {
@@ -25,30 +33,46 @@ export const followUser = async (targetUserId: string) => {
       },
     });
 
-    return;
+    revalidatePath(`/${recipient.username}`);
+    revalidatePath("/");
+
+    return { success: true, message: "Unfollowed successfully." };
   }
 
-  // Get the recipient's information
-  const recipient = await prisma.user.findUnique({
-    where: { id: targetUserId },
-    select: {
-      username: true,
+  // Prevent following users when either person has blocked the other.
+  const blockExists = await prisma.block.findFirst({
+    where: {
+      OR: [
+        {
+          blockerId: userId,
+          blockedId: targetUserId,
+        },
+        {
+          blockerId: targetUserId,
+          blockedId: userId,
+        },
+      ],
     },
   });
 
-  if (!recipient) return;
+  if (blockExists) {
+    return {
+      success: false,
+      message: "You cannot follow this user.",
+    };
+  }
 
-  // Get the sender's information
   const sender = await prisma.user.findUnique({
     where: { id: userId },
     select: {
       username: true,
+      img: true,
     },
   });
 
   if (!sender) return;
 
-  // Create the follow relationship and notification together
+  // Create follow relationship and notification together.
   const notification = await prisma.$transaction(async (tx) => {
     await tx.follow.create({
       data: {
@@ -67,17 +91,21 @@ export const followUser = async (targetUserId: string) => {
     });
   });
 
-  // Send the notification through Socket.IO
-  if (notification) {
-    getIO()?.to(`user:${targetUserId}`).emit("getNotification", {
-      id: notification.id,
-      senderUsername: sender.username,
-      type: "follow",
-      link: notification.link,
-      createdAt: notification.createdAt,
-      read: notification.read,
-    });
-  }
+  // Send notification through Socket.IO.
+  getIO()?.to(`user:${targetUserId}`).emit("getNotification", {
+    id: notification.id,
+    senderUsername: sender.username,
+    senderImg: sender.img,
+    type: "follow",
+    link: notification.link,
+    createdAt: notification.createdAt,
+    read: notification.read,
+  });
+
+  revalidatePath(`/${recipient.username}`);
+  revalidatePath("/");
+
+  return { success: true, message: "Followed successfully." };
 };
 
 export const likePost = async (postId: number) => {
@@ -122,6 +150,7 @@ export const likePost = async (postId: number) => {
     where: { id: userId },
     select: {
       username: true,
+      img: true,
     },
   });
 
@@ -155,6 +184,7 @@ export const likePost = async (postId: number) => {
     getIO()?.to(`user:${post.userId}`).emit("getNotification", {
       id: notification.id,
       senderUsername: sender.username,
+      senderImg: sender.img,
       type: "like",
       link: notification.link,
       createdAt: notification.createdAt,
@@ -206,6 +236,7 @@ export const repostPost = async (postId: number) => {
     where: { id: userId },
     select: {
       username: true,
+      img: true,
     },
   });
 
@@ -239,6 +270,7 @@ export const repostPost = async (postId: number) => {
     getIO()?.to(`user:${post.userId}`).emit("getNotification", {
       id: notification.id,
       senderUsername: sender.username,
+      senderImg: sender.img,
       type: "rePost",
       link: notification.link,
       createdAt: notification.createdAt,
@@ -323,6 +355,7 @@ export const addComment = async (
       where: { id: userId },
       select: {
         username: true,
+        img: true,
       },
     });
 
@@ -358,6 +391,7 @@ export const addComment = async (
       getIO()?.to(`user:${parentPost.userId}`).emit("getNotification", {
         id: notification.id,
         senderUsername: sender.username,
+        senderImg: sender.img,
         type: "comment",
         link: notification.link,
         createdAt: notification.createdAt,
@@ -470,3 +504,204 @@ export const markAllNotificationsAsRead = async () => {
 
   return { success: true };
 };
+
+const reportSchema = z.object({
+  targetUserId: z.string().min(1),
+  reason: z.enum([
+    "SPAM",
+    "HARASSMENT",
+    "IMPERSONATION",
+    "INAPPROPRIATE",
+    "OTHER",
+  ]),
+  description: z.string().max(1000).optional(),
+});
+
+// Check the blocking relationship between the current user and another user.
+export async function getBlockStatus(targetUserId: string) {
+  const { userId } = await auth();
+
+  if (!userId || userId === targetUserId) {
+    return {
+      isBlockedByMe: false,
+      hasBlockedMe: false,
+    };
+  }
+
+  const [myBlock, theirBlock] = await Promise.all([
+    prisma.block.findUnique({
+      where: {
+        blockerId_blockedId: {
+          blockerId: userId,
+          blockedId: targetUserId,
+        },
+      },
+      select: { id: true },
+    }),
+    prisma.block.findUnique({
+      where: {
+        blockerId_blockedId: {
+          blockerId: targetUserId,
+          blockedId: userId,
+        },
+      },
+      select: { id: true },
+    }),
+  ]);
+
+  return {
+    isBlockedByMe: !!myBlock,
+    hasBlockedMe: !!theirBlock,
+  };
+}
+
+// Block another user and remove any existing follow relationships.
+export async function blockUser(targetUserId: string) {
+  const { userId } = await auth();
+
+  if (!userId) {
+    return { success: false, message: "You must be logged in." };
+  }
+
+  if (userId === targetUserId) {
+    return { success: false, message: "You cannot block yourself." };
+  }
+
+  const targetUser = await prisma.user.findUnique({
+    where: { id: targetUserId },
+    select: { username: true },
+  });
+
+  if (!targetUser) {
+    return { success: false, message: "User not found." };
+  }
+
+  const existingBlock = await prisma.block.findUnique({
+    where: {
+      blockerId_blockedId: {
+        blockerId: userId,
+        blockedId: targetUserId,
+      },
+    },
+  });
+
+  if (existingBlock) {
+    return { success: true, message: "User is already blocked." };
+  }
+
+  await prisma.$transaction([
+    prisma.block.create({
+      data: {
+        blockerId: userId,
+        blockedId: targetUserId,
+      },
+    }),
+    prisma.follow.deleteMany({
+      where: {
+        OR: [
+          { followerId: userId, followingId: targetUserId },
+          { followerId: targetUserId, followingId: userId },
+        ],
+      },
+    }),
+  ]);
+
+  revalidatePath("/");
+  revalidatePath(`/${targetUser.username}`);
+
+  return { success: true, message: "User blocked successfully." };
+}
+
+// Unblock a user.
+export async function unblockUser(targetUserId: string) {
+  const { userId } = await auth();
+
+  if (!userId) {
+    return { success: false, message: "You must be logged in." };
+  }
+
+  if (userId === targetUserId) {
+    return { success: false, message: "Invalid user." };
+  }
+
+  await prisma.block.deleteMany({
+    where: {
+      blockerId: userId,
+      blockedId: targetUserId,
+    },
+  });
+
+  revalidatePath("/");
+
+  const targetUser = await prisma.user.findUnique({
+    where: { id: targetUserId },
+    select: { username: true },
+  });
+
+  if (targetUser) {
+    revalidatePath(`/${targetUser.username}`);
+  }
+
+  return { success: true, message: "User unblocked successfully." };
+}
+
+// Report another user.
+export async function reportUser(
+  targetUserId: string,
+  reason: string,
+  description?: string,
+) {
+  const { userId } = await auth();
+
+  if (!userId) {
+    return { success: false, message: "You must be logged in." };
+  }
+
+  if (userId === targetUserId) {
+    return { success: false, message: "You cannot report yourself." };
+  }
+
+  const validation = reportSchema.safeParse({
+    targetUserId,
+    reason,
+    description,
+  });
+
+  if (!validation.success) {
+    return { success: false, message: "Invalid report details." };
+  }
+
+  const targetUser = await prisma.user.findUnique({
+    where: { id: targetUserId },
+    select: { id: true },
+  });
+
+  if (!targetUser) {
+    return { success: false, message: "User not found." };
+  }
+
+  const existingReport = await prisma.report.findFirst({
+    where: {
+      reporterId: userId,
+      reportedId: targetUserId,
+    },
+  });
+
+  if (existingReport) {
+    return {
+      success: false,
+      message: "You have already reported this user.",
+    };
+  }
+
+  await prisma.report.create({
+    data: {
+      reporterId: userId,
+      reportedId: targetUserId,
+      reason: validation.data.reason,
+      description: validation.data.description?.trim() || null,
+    },
+  });
+
+  return { success: true, message: "Report submitted successfully." };
+}
