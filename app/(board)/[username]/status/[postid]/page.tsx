@@ -22,6 +22,7 @@ const page = async ({params}:{params: Promise<{ username: string, postid: string
     include: {
       user: {
         select: {
+          id: true,
           displayName: true,
           username: true,
           img: true
@@ -59,6 +60,12 @@ const page = async ({params}:{params: Promise<{ username: string, postid: string
         }
       },
       comments: {
+        // comments: {
+        // where: {
+        //   userId: {
+        //     notIn: blockedUserIds,
+        //   },
+        // },
         orderBy: { createdAt: "desc" },
         include: {
           user: {
@@ -106,6 +113,27 @@ const page = async ({params}:{params: Promise<{ username: string, postid: string
 
   if (!post) return notFound();
 
+  // Make sure the URL username matches the post author.
+  if (post.user.username !== username) return notFound();
+
+  // Prevent access when either user has blocked the other.
+  const blockExists = await prisma.block.findFirst({
+    where: {
+      OR: [
+        {
+          blockerId: userId,
+          blockedId: post.user.id,
+        },
+        {
+          blockerId: post.user.id,
+          blockedId: userId,
+        },
+      ],
+    },
+  });
+
+  if (blockExists) return notFound();
+
   return (
     <div className="p-4 self-start md:self-center">
       <h1 className="text-2xl font-bold">Post</h1>
@@ -121,7 +149,7 @@ const page = async ({params}:{params: Promise<{ username: string, postid: string
             />
             <div className="flex md:hidden justify-between  w-full items-center">
               <div className="flex">
-                <Link href="/h3ktorr">
+                <Link href={`/${post.user.username}`}>
                   <p className="m-auto ml-8 font-semibold">{post.user.displayName }</p>
                 </Link>
                 <p className="m-auto ml-4 text-sm text-foreground/70">@{post.user.username}</p>
@@ -134,7 +162,7 @@ const page = async ({params}:{params: Promise<{ username: string, postid: string
               {/* FEED HEADER*/}
             <div className="hidden md:flex justify-between  w-full items-center ">
               <div className="flex">
-                <Link href="/h3ktorr">
+                <Link href={`/${post.user.username}`}>
                   <p className="m-auto ml-8 font-semibold">{post.user.displayName }</p>
                 </Link>
                 <p className="m-auto ml-4 text-sm text-foreground/70">@{post.user.username}</p>
@@ -161,6 +189,8 @@ const page = async ({params}:{params: Promise<{ username: string, postid: string
                 isSaved={!!post.saves.length} 
                 count={post._count}
                 postId={post.id}
+                username={post.user.username}
+                userId={post.user.id}
               />
             </div>
           </div>

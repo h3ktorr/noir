@@ -108,6 +108,28 @@ export const followUser = async (targetUserId: string) => {
   return { success: true, message: "Followed successfully." };
 };
 
+const hasBlockBetweenUsers = async (userId: string, targetUserId: string) => {
+  const block = await prisma.block.findFirst({
+    where: {
+      OR: [
+        {
+          blockerId: userId,
+          blockedId: targetUserId,
+        },
+        {
+          blockerId: targetUserId,
+          blockedId: userId,
+        },
+      ],
+    },
+    select: {
+      id: true,
+    },
+  });
+
+  return !!block;
+};
+
 export const likePost = async (postId: number) => {
   const { userId } = await auth();
   if (!userId) return;
@@ -145,6 +167,10 @@ export const likePost = async (postId: number) => {
   });
 
   if (!post) return;
+
+  const isBlocked = await hasBlockBetweenUsers(userId, post.userId);
+
+  if (isBlocked) return;
 
   const sender = await prisma.user.findUnique({
     where: { id: userId },
@@ -231,6 +257,10 @@ export const repostPost = async (postId: number) => {
 
   if (!post) return;
 
+  const isBlocked = await hasBlockBetweenUsers(userId, post.userId);
+
+  if (isBlocked) return;
+
   // Get the person doing the repost
   const sender = await prisma.user.findUnique({
     where: { id: userId },
@@ -285,25 +315,45 @@ export const savePost = async (postId: number) => {
 
   const existingSavedPost = await prisma.savedPosts.findFirst({
     where: {
-      userId: userId,
-      postId: postId,
+      userId,
+      postId,
     },
   });
 
+  // Unsave: allow users to remove existing saves.
   if (existingSavedPost) {
     await prisma.savedPosts.delete({
       where: {
         id: existingSavedPost.id,
       },
     });
-  } else {
-    await prisma.savedPosts.create({
-      data: {
-        userId: userId,
-        postId: postId,
-      },
-    });
+
+    return;
   }
+
+  // Get the original post owner.
+  const post = await prisma.post.findUnique({
+    where: {
+      id: postId,
+    },
+    select: {
+      userId: true,
+    },
+  });
+
+  if (!post) return;
+
+  // Prevent saving posts when either user has blocked the other.
+  const isBlocked = await hasBlockBetweenUsers(userId, post.userId);
+
+  if (isBlocked) return;
+
+  await prisma.savedPosts.create({
+    data: {
+      userId,
+      postId,
+    },
+  });
 };
 
 export const addComment = async (
@@ -347,6 +397,13 @@ export const addComment = async (
     });
 
     if (!parentPost) {
+      return { success: false, error: true };
+    }
+
+    // Prevent commenting when either user has blocked the other.
+    const isBlocked = await hasBlockBetweenUsers(userId, parentPost.userId);
+
+    if (isBlocked) {
       return { success: false, error: true };
     }
 
