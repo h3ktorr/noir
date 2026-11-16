@@ -41,22 +41,24 @@ const page = async ({params}:{params: Promise< {username: string} >}) => {
     : { isBlockedByMe: false, hasBlockedMe: false };
 
   return (
-    <div className="w-full">
+    <div className="w-full min-w-0">
       <div className="w-full border-b border-gray-300 mb-6">
         {/* COVER + AVATAR */}
         <div className="relative w-full">
 
           {/* COVER */}
-          <div className="relative w-full aspect-3/1 bg-gray-300 h-72">
+          <div className="relative w-full h-72 overflow-hidden bg-gray-300">
             {user.cover && (
-              <ImageComp
-                src={user.cover}
-                alt="Cover"
-                tr={true}
-                w={1200}
-                h={288}
-                className="object-cover"
-              />
+              <div className="absolute inset-0 w-full h-full">
+                <ImageComp
+                  src={user.cover}
+                  alt="Cover"
+                  tr={true}
+                  w={1200}
+                  h={288}
+                  className="w-full h-full object-cover"
+                />
+              </div>
             )}
           </div>
 
