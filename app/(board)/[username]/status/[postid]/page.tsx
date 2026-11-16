@@ -15,6 +15,25 @@ const page = async ({params}:{params: Promise<{ username: string, postid: string
   const { userId } = await auth();
   if (!userId) return;
 
+  // Get users involved in a block relationship with the current user.
+const blocks = await prisma.block.findMany({
+  where: {
+    OR: [
+      { blockerId: userId },
+      { blockedId: userId },
+    ],
+  },
+  select: {
+    blockerId: true,
+    blockedId: true,
+  },
+});
+
+// Extract the other user's ID from each block relationship.
+const blockedUserIds = blocks.map((block) =>
+  block.blockerId === userId ? block.blockedId : block.blockerId
+);
+
   const post = await prisma.post.findFirst({
     where: {
       id: Number(postid),
@@ -32,8 +51,14 @@ const page = async ({params}:{params: Promise<{ username: string, postid: string
         select: {
           likes: true,
           rePosts: true,
-          comments: true
-        }
+          comments: {
+            where: {
+              userId: {
+                notIn: blockedUserIds,
+              },
+            },
+          },
+        },
       },
       likes: {
         where: {
@@ -60,12 +85,11 @@ const page = async ({params}:{params: Promise<{ username: string, postid: string
         }
       },
       comments: {
-        // comments: {
-        // where: {
-        //   userId: {
-        //     notIn: blockedUserIds,
-        //   },
-        // },
+        where: {
+          userId: {
+            notIn: blockedUserIds,
+          },
+        },
         orderBy: { createdAt: "desc" },
         include: {
           user: {
@@ -79,8 +103,14 @@ const page = async ({params}:{params: Promise<{ username: string, postid: string
             select: {
               likes: true,
               rePosts: true,
-              comments: true
-            }
+              comments: {
+                where: {
+                  userId: {
+                    notIn: blockedUserIds,
+                  },
+                },
+              },
+            },
           },
           likes: {
             where: {

@@ -17,7 +17,11 @@ const FollowButton = ({userId, isFollowed}: {userId: string, isFollowed: boolean
 
   return (
     <form action={followAction}>
-      <button className="px-2 md:px-4 py-2 rounded-lg bg-foreground text-background hover:bg-red-600 transition">{optimisticFollow ? "Unfollow" : "Follow"}</button>
+      <button
+        className="w-24 py-2 rounded-lg bg-foreground text-background hover:bg-red-600 transition text-center"
+      >
+        {optimisticFollow ? "Unfollow" : "Follow"}
+      </button>
     </form>
   )
 }

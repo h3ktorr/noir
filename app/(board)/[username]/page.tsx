@@ -9,6 +9,7 @@ import FollowButton from "@/components/FollowButton";
 import EditProfile from "@/components/EditProfile";
 import ProfileActions from "@/components/ProfileActions";
 import { getBlockStatus } from "@/action";
+import ProfileFollowStats from "@/components/ProfileFollowStats";
 
 const page = async ({params}:{params: Promise< {username: string} >}) => {
     const { username } = await params;
@@ -141,25 +142,11 @@ const page = async ({params}:{params: Promise< {username: string} >}) => {
             </div>
 
           {/* FOLLOW STATS */}
-          <div className="flex gap-6 text-sm">
-            <div className="flex items-center gap-1">
-              <span className="font-semibold">
-                {user._count.following}
-              </span>
-              <span className="text-foreground/60">
-                Followers
-              </span>
-            </div>
-
-            <div className="flex items-center gap-1">
-              <span className="font-semibold">
-                {user._count.followers}
-              </span>
-              <span className="text-foreground/60">
-                Following
-              </span>
-            </div>
-          </div>
+          <ProfileFollowStats
+            username={user.username}
+            followersCount={user._count.following}
+            followingCount={user._count.followers}
+          />
 
         </div>
       </div>

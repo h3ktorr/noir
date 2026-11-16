@@ -71,7 +71,7 @@ const Post = ({comment, post}: {comment?: boolean, post: PostWithDetails}) => {
             className={`rounded-full h-fit ${comment && "w-9 h-9"}`}
           />
           <div className="flex w-full items-center md:hidden">
-            <Link href={`${originalPost.user.username}`}>
+            <Link href={`/${originalPost.user.username}`}>
               <p className="ml-8 font-semibold">{originalPost.user.displayName}</p>
             </Link>
               <p className="ml-4 text-sm text-foreground/70">@{originalPost.user.username}</p>
@@ -83,7 +83,7 @@ const Post = ({comment, post}: {comment?: boolean, post: PostWithDetails}) => {
        {/* FEED HEADER*/}
      <div className="justify-between  w-full items-center hidden md:flex">
        <div className="flex">
-         <Link href={`${originalPost.user.username}`}>
+         <Link href={`/${originalPost.user.username}`}>
            <p className="m-auto ml-8 font-semibold">{originalPost.user.displayName}</p>
          </Link>
           <p className="m-auto ml-4 text-sm text-foreground/70">@{originalPost.user.username}</p>
@@ -92,7 +92,7 @@ const Post = ({comment, post}: {comment?: boolean, post: PostWithDetails}) => {
        <Ellipsis size={20} className="text-foreground" />
      </div>
      {/* FEED BODY*/}
-     <Link href={`${originalPost.user.username}/status/${originalPost.id}`}>
+     <Link href={`/${originalPost.user.username}/status/${originalPost.id}`}>
        <div className={`md:ml-8 flex flex-col gap-4 w-full justify-start ${comment ? "pt-2" : "pt-6"}`}>
          <p className="">{originalPost.desc}</p>
          {(originalPost.img && originalPost.img !== null) && <ImageComp
