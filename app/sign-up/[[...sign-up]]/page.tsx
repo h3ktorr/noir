@@ -18,25 +18,31 @@ export default function Page() {
   const [username, setUsername] = useState('')
   const [isGoogleLoading, setIsGoogleLoading] = useState(false)
   const [isEmailLoading, setIsEmailLoading] = useState(false)
+  const [isVerifyingCode, setIsVerifyingCode] = useState(false)
+  const [isResendingCode, setIsResendingCode] = useState(false)
+  const [formError, setFormError] = useState('')
 
   // STEP 1: create sign-up
   const signUpWithGoogle = async () => {
-    try {
-      setIsGoogleLoading(true)
+    setIsGoogleLoading(true)
+    setFormError('')
 
+    try {
       const { error } = await signUp.sso({
         strategy: 'oauth_google',
         redirectCallbackUrl: '/sso-callback',
-        redirectUrl: '/', // Learn more about session tasks at https://clerk.com/docs/guides/development/custom-flows/authentication/session-tasks
+        redirectUrl: '/',
       })
+
       if (error) {
-        // See https://clerk.com/docs/guides/development/custom-flows/error-handling
-        // for more info on error handling
-        console.error(JSON.stringify(error, null, 2))
+        console.error('Google signup error:', JSON.stringify(error, null, 2))
+        setFormError('Unable to continue with Google. Please try again.')
         return
       }
     } catch (err) {
-      console.error(err)
+      console.error('Google signup exception:', err)
+      setFormError('Something went wrong while connecting to Google.')
+    } finally {
       setIsGoogleLoading(false)
     }
   }
@@ -44,8 +50,10 @@ export default function Page() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
+    setIsEmailLoading(true)
+    setFormError('')
+
     try {
-      setIsEmailLoading(true)
       const { error } = await signUp.password({
         emailAddress,
         password,
@@ -55,15 +63,27 @@ export default function Page() {
       })
 
       if (error) {
-        console.error(JSON.stringify(error, null, 2))
+        console.error('Signup error:', JSON.stringify(error, null, 2))
+        setFormError('Unable to create your account. Please check your details.')
         return
       }
 
-      // send verification email
-      await signUp.verifications.sendEmailCode()
+      const verificationResult = await signUp.verifications.sendEmailCode()
+
+      if (verificationResult.error) {
+        console.error(
+          'Email verification sending error:',
+          JSON.stringify(verificationResult.error, null, 2)
+        )
+        setFormError('Your account was created, but we could not send the verification code. Please try again.')
+        return
+      }
+
       setVerifying(true)
     } catch (err) {
-      console.error(err)
+      console.error('Signup exception:', err)
+      setFormError('Something went wrong while creating your account.')
+    } finally {
       setIsEmailLoading(false)
     }
   }
@@ -72,26 +92,65 @@ export default function Page() {
   const handleVerify = async (e: React.FormEvent) => {
     e.preventDefault()
 
-    const { error } = await signUp.verifications.verifyEmailCode({
-      code,
-    })
+    setIsVerifyingCode(true)
+    setFormError('')
 
-    if (error) {
-      console.error(JSON.stringify(error, null, 2))
-      return
-    }
-
-    if (signUp.status === 'complete') {
-      await signUp.finalize({
-        navigate: ({ decorateUrl }) => {
-          const url = decorateUrl('/')
-          if (url.startsWith('http')) {
-            window.location.href = url
-          } else {
-            router.push(url)
-          }
-        },
+    try {
+      const { error } = await signUp.verifications.verifyEmailCode({
+        code,
       })
+
+      if (error) {
+        console.error('Verification error:', JSON.stringify(error, null, 2))
+        setFormError('Invalid or expired verification code. Please try again.')
+        return
+      }
+
+      if (signUp.status === 'complete') {
+        await signUp.finalize({
+          navigate: ({ decorateUrl }) => {
+            const url = decorateUrl('/')
+
+            if (url.startsWith('http')) {
+              window.location.href = url
+            } else {
+              router.push(url)
+            }
+          },
+        })
+      } else if (signUp.status === 'missing_requirements') {
+        router.push('/sign-in/continue')
+      } else {
+        console.error('Signup verification incomplete:', signUp.status)
+        setFormError('Your email was verified, but additional account information is required.')
+      }
+    } catch (err) {
+      console.error('Verification exception:', err)
+      setFormError('Something went wrong while verifying your email.')
+    } finally {
+      setIsVerifyingCode(false)
+    }
+  }
+
+  const handleResendCode = async () => {
+    setIsResendingCode(true)
+    setFormError('')
+
+    try {
+      const { error } = await signUp.verifications.sendEmailCode()
+
+      if (error) {
+        console.error('Resend code error:', JSON.stringify(error, null, 2))
+        setFormError('Unable to resend the verification code. Please try again.')
+        return
+      }
+
+      setFormError('A new verification code has been sent to your email.')
+    } catch (err) {
+      console.error('Resend code exception:', err)
+      setFormError('Something went wrong while resending your code.')
+    } finally {
+      setIsResendingCode(false)
     }
   }
 
@@ -112,22 +171,33 @@ export default function Page() {
               placeholder="Enter code"
             />
 
-            {errors.fields.code && <p>{errors.fields.code.message}</p>}
+            {formError && (
+              <p className="text-sm text-red-500">{formError}</p>
+            )}
 
             <button
               type="submit"
-              disabled={fetchStatus === 'fetching'}
+              disabled={isVerifyingCode || fetchStatus === 'fetching'}
               className="bg-background text-foreground px-4 py-2 rounded-lg mt-4"
             >
-              Verify
+              {isVerifyingCode ? (
+                <span className="flex items-center justify-center gap-2">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Verifying...
+                </span>
+              ) : (
+                'Verify'
+              )}
             </button>
           </form>
 
           <button
-            onClick={() => signUp.verifications.sendEmailCode()}
-            className="mt-4 text-sm underline"
+            type="button"
+            onClick={handleResendCode}
+            disabled={isResendingCode}
+            className="mt-4 text-sm underline disabled:opacity-50"
           >
-            Resend code
+            {isResendingCode ? 'Sending...' : 'Resend code'}
           </button>
         </div>
       </div>
@@ -189,8 +259,8 @@ export default function Page() {
             className="w-full p-2 rounded-lg text-background border border-background"
           />
 
-          {errors.fields?.password && (
-            <p>{errors.fields.password.message}</p>
+          {formError && (
+            <p className="text-sm text-red-500">{formError}</p>
           )}
 
           <button
@@ -208,6 +278,10 @@ export default function Page() {
             )}
           </button>
         </form>
+
+        {formError && (
+          <p className="text-sm text-red-500 mt-2">{formError}</p>
+        )}
 
         {/* CAPTCHA */}
         <div id="clerk-captcha" className="mt-3 w-full" />
@@ -255,6 +329,9 @@ export default function Page() {
             </>
           )}
         </button>
+        {formError && (
+          <p className="text-sm text-red-500 mt-2">{formError}</p>
+        )}
 
         <p className="text-sm mt-2">
           Already have an account?{" "}

@@ -1,12 +1,17 @@
 "use server";
 
-import { auth } from "@clerk/nextjs/server";
+import { auth, clerkClient } from "@clerk/nextjs/server";
 import prisma from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
 const profileSchema = z.object({
-  displayName: z.string().trim().min(1, "Display name is required").max(50),
+  displayName: z
+    .string()
+    .trim()
+    .min(1, "Display name is required")
+    .max(50, "Display name cannot exceed 50 characters"),
+
   username: z
     .string()
     .trim()
@@ -14,6 +19,7 @@ const profileSchema = z.object({
     .min(3, "Username must be at least 3 characters")
     .max(20, "Username cannot exceed 20 characters")
     .regex(/^[a-z0-9_]+$/, "Use only letters, numbers, and underscores"),
+
   bio: z.string().trim().max(160, "Bio cannot exceed 160 characters"),
   location: z.string().trim().max(60),
   job: z.string().trim().max(60),
@@ -23,12 +29,17 @@ const profileSchema = z.object({
 
 export async function updateProfile(input: unknown) {
   try {
+    // 1. Authenticate the request.
     const { userId } = await auth();
 
     if (!userId) {
-      return { success: false, error: "You must be signed in." };
+      return {
+        success: false,
+        error: "You must be signed in.",
+      };
     }
 
+    // 2. Validate the submitted profile information.
     const result = profileSchema.safeParse(input);
 
     if (!result.success) {
@@ -41,15 +52,20 @@ export async function updateProfile(input: unknown) {
 
     const data = result.data;
 
+    // 3. Confirm that the user's Prisma profile exists.
     const currentUser = await prisma.user.findUnique({
       where: { id: userId },
       select: { username: true },
     });
 
     if (!currentUser) {
-      return { success: false, error: "Profile not found." };
+      return {
+        success: false,
+        error: "Profile not found.",
+      };
     }
 
+    // 4. Check whether another Noir user already has this username.
     const existingUsername = await prisma.user.findFirst({
       where: {
         username: data.username,
@@ -59,9 +75,22 @@ export async function updateProfile(input: unknown) {
     });
 
     if (existingUsername) {
-      return { success: false, error: "That username is already taken." };
+      return {
+        success: false,
+        error: "That username is already taken.",
+      };
     }
 
+    // 5. Update Clerk only when the username has actually changed.
+    if (currentUser.username !== data.username) {
+      const client = await clerkClient();
+
+      await client.users.updateUser(userId, {
+        username: data.username,
+      });
+    }
+
+    // 6. Update Noir's profile in Prisma.
     await prisma.user.update({
       where: { id: userId },
       data: {
@@ -70,11 +99,18 @@ export async function updateProfile(input: unknown) {
         bio: data.bio,
         location: data.location,
         job: data.job,
-        ...(data.img !== undefined && { img: data.img }),
-        ...(data.cover !== undefined && { cover: data.cover }),
+
+        ...(data.img !== undefined && {
+          img: data.img,
+        }),
+
+        ...(data.cover !== undefined && {
+          cover: data.cover,
+        }),
       },
     });
 
+    // 7. Refresh both the old and new profile URLs.
     revalidatePath(`/${currentUser.username}`);
     revalidatePath(`/${data.username}`);
 
@@ -87,7 +123,8 @@ export async function updateProfile(input: unknown) {
 
     return {
       success: false,
-      error: "Something went wrong while updating your profile.",
+      error:
+        "Something went wrong while updating your profile. Please try again.",
     };
   }
 }

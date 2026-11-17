@@ -48,6 +48,7 @@ const EditProfile = ({ user }: EditProfileProps) => {
     };
   }, [avatarPreview, coverPreview]);
 
+  
   const handleImageChange = (
     e: React.ChangeEvent<HTMLInputElement>,
     type: "avatar" | "cover"
@@ -73,13 +74,25 @@ const EditProfile = ({ user }: EditProfileProps) => {
     const preview = URL.createObjectURL(file);
 
     if (type === "avatar") {
+      setAvatarPreview((previous) => {
+        if (previous) URL.revokeObjectURL(previous);
+        return preview;
+      });
+
       setAvatar(file);
-      setAvatarPreview(preview);
     } else {
+      setCoverPreview((previous) => {
+        if (previous) URL.revokeObjectURL(previous);
+        return preview;
+      });
+
       setCover(file);
-      setCoverPreview(preview);
     }
+
+    // Allow selecting the same file again.
+    e.target.value = "";
   };
+
 
   const uploadImage = async (file: File, folder: string) => {
     const response = await fetch("/api/upload-auth");
@@ -306,7 +319,9 @@ const EditProfile = ({ user }: EditProfileProps) => {
                   <input
                     id="username"
                     value={username}
-                    onChange={(e) => setUsername(e.target.value)}
+                    onChange={(e) =>
+                      setUsername(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ""))
+                    }
                     maxLength={20}
                     required
                     className="w-full p-3 bg-transparent outline-none"

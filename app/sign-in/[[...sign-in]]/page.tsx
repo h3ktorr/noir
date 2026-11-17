@@ -1,6 +1,6 @@
 'use client'
 
-import { useSignIn, useSignUp } from '@clerk/nextjs';
+import { useSignIn } from '@clerk/nextjs';
 import { OAuthStrategy } from '@clerk/shared/types'
 import { useRouter } from 'next/navigation';
 import { useState } from "react";
@@ -16,33 +16,32 @@ export default function Page() {
   const [isGoogleLoading, setIsGoogleLoading] = useState(false)
 
   const signInWith = async (strategy: OAuthStrategy) => {
-    try{
-      setIsGoogleLoading(true)
+    setIsGoogleLoading(true)
+
+    try {
       const { error } = await signIn.sso({
         strategy,
         redirectCallbackUrl: '/sso-callback',
-        redirectUrl: '/', // Learn more about session tasks at https://clerk.com/docs/guides/development/custom-flows/authentication/session-tasks
+        redirectUrl: '/',
       })
+
       if (error) {
-        // See https://clerk.com/docs/guides/development/custom-flows/error-handling
-        // for more info on error handling
-        console.error(JSON.stringify(error, null, 2))
+        console.error('Google sign-in error:', JSON.stringify(error, null, 2))
         return
       }
 
       if (signIn.status === 'needs_second_factor') {
-        // See https://clerk.com/docs/guides/development/custom-flows/authentication/multi-factor-authentication
-        console.log('needs_second_factor')
+        console.log('Needs second factor')
       } else if (signIn.status === 'needs_client_trust') {
-        // See https://clerk.com/docs/guides/development/custom-flows/authentication/client-trust
-        console.log('needs_client_trust')
+        console.log('Needs client trust')
       } else {
-        // Check why the sign-in is not complete
-        console.error('Sign-in attempt not complete:', signIn)
-      }} catch (error) {
-        console.error('Error during sign-in:', error)
-        setIsGoogleLoading(false)
+        console.error('Sign-in attempt not complete:', signIn.status)
       }
+    } catch (error) {
+      console.error('Error during Google sign-in:', error)
+    } finally {
+      setIsGoogleLoading(false)
+    }
   }
 
 
@@ -71,15 +70,16 @@ export default function Page() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
-    try {
     setIsSigningIn(true)
+
+    try {
       const { error } = await signIn.create({
         identifier: emailAddress,
         password,
       })
 
       if (error) {
-        console.error(JSON.stringify(error, null, 2))
+        console.error('Email sign-in error:', JSON.stringify(error, null, 2))
         return
       }
 
@@ -91,7 +91,8 @@ export default function Page() {
         console.error('Sign-in not complete:', signIn.status)
       }
     } catch (error) {
-      console.error('Error during sign-in:', error)
+      console.error('Error during email sign-in:', error)
+    } finally {
       setIsSigningIn(false)
     }
   }
