@@ -121,6 +121,8 @@ export default function Page() {
 
   // If the sign-up is complete, the user shouldn't be on this page
   useEffect(() => {
+    if (fetchStatus === 'fetching') return
+
     if (signUp.status === 'complete' || signIn.status === 'complete') {
       router.replace('/')
       return
@@ -129,7 +131,7 @@ export default function Page() {
     if (signUp.status !== 'missing_requirements') {
       router.replace('/sign-in')
     }
-  }, [signUp.status, signIn.status, router])
+  }, [fetchStatus, signUp.status, signIn.status, router])
 
   useEffect(() => {
     console.log('SIGN UP STATUS:', signUp.status)

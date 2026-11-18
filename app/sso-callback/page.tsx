@@ -83,59 +83,13 @@ export default function Page() {
 
     const handleCallback = async () => {
       try {
-        // A new Google signup may need additional information.
-        if (signUp.status === 'missing_requirements') {
-          router.replace('/sign-in/continue')
-          return
-        }
-
-        // Existing Google account: complete sign-in.
+        // 1. Existing Google account: complete sign-in.
         if (signIn.status === 'complete') {
           await finalizeSignIn()
           return
         }
 
-        // Transfer an existing signup attempt into sign-in.
-        if (signUp.isTransferable) {
-          const { error } = await signIn.create({ transfer: true })
-
-          if (error) {
-            console.error('Sign-in transfer error:', error)
-
-            setCallbackError(
-              error.longMessage ||
-              'Unable to transfer your account to sign in. Please try again.'
-            )
-            return
-          }
-
-          if (isSignInComplete()) {
-            await finalizeSignIn()
-            return
-          }
-
-          console.log('Sign-in status after transfer:', signIn.status)
-          navigateToSignIn()
-          return
-        }
-
-        // The sign-in requires another authentication factor.
-        if (
-          signIn.status === 'needs_first_factor' &&
-          !signIn.supportedFirstFactors?.every(
-            (factor) => factor.strategy === 'enterprise_sso'
-          )
-        ) {
-          navigateToSignIn()
-          return
-        }
-
-        console.log('Sign-in status:', signIn.status)
-        console.log('Sign-in transferable:', signIn.isTransferable)
-        console.log('Sign-up status:', signUp.status)
-        console.log('Sign-up transferable:', signUp.isTransferable)
-
-        // Transfer an external sign-in attempt into signup.
+        // 2. New Google user: transfer sign-in into signup.
         if (signIn.isTransferable) {
           const { error } = await signUp.create({ transfer: true })
 
@@ -155,26 +109,62 @@ export default function Page() {
           }
 
           if (isSignUpMissingRequirements()) {
+            console.log('SIGNUP AFTER TRANSFER:', {
+              id: signUp.id,
+              status: signUp.status,
+              requiredFields: signUp.requiredFields,
+              missingFields: signUp.missingFields,
+            })
+
             router.replace('/sign-in/continue')
             return
           }
 
-          console.error(
-            'Signup did not complete after transfer:',
-            signUp.status
-          )
+          console.error('Unexpected signup status:', signUp.status)
 
           setCallbackError(
-            'We could not complete your Google registration. Please return to sign in and try again.'
+            'We could not complete your Google registration. Please try again.'
           )
           return
         }
 
-        // A completed signup can be finalized directly.
-        if (isSignUpComplete()) {
-          await finalizeSignUp()
+        // 3. Transfer an existing signup attempt into sign-in.
+        if (signUp.isTransferable) {
+          const { error } = await signIn.create({ transfer: true })
+
+          if (error) {
+            console.error('Sign-in transfer error:', error)
+
+            setCallbackError(
+              error.longMessage ||
+              'Unable to transfer your account to sign in. Please try again.'
+            )
+            return
+          }
+
+          if (isSignInComplete()) {
+            await finalizeSignIn()
+            return
+          }
+
+          navigateToSignIn()
           return
         }
+
+        // 4. Handle an already-existing incomplete signup.
+        if (isSignUpMissingRequirements()) {
+          router.replace('/sign-in/continue')
+          return
+        }
+
+        // 5. Log unexpected state.
+        console.log('OAuth callback state:', {
+          signInStatus: signIn.status,
+          signInTransferable: signIn.isTransferable,
+          signUpStatus: signUp.status,
+          signUpTransferable: signUp.isTransferable,
+        })
+
 
         // Handle other authentication requirements.
         if (
