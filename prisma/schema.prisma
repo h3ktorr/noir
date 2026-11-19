@@ -30,8 +30,8 @@ model User {
   notificationsReceived Notification[] @relation("NotificationRecipient")
   notificationsSent     Notification[] @relation("NotificationSender")
 
-  blocks    Block[]  @relation("UserBlocks")
-  blockedBy Block[]  @relation("UserBlockedBy")
+  blocks    Block[] @relation("UserBlocks")
+  blockedBy Block[] @relation("UserBlockedBy")
 
   reportsSent     Report[] @relation("UserReports")
   reportsReceived Report[] @relation("UserReported")
@@ -143,8 +143,8 @@ model Block {
 }
 
 model Report {
-  id          Int      @id @default(autoincrement())
-  createdAt   DateTime @default(now())
+  id        Int      @id @default(autoincrement())
+  createdAt DateTime @default(now())
 
   reporterId  String
   reportedId  String
@@ -156,4 +156,10 @@ model Report {
 
   @@index([reportedId, createdAt])
   @@index([reporterId, createdAt])
+}
+
+model ClerkUserSyncState {
+  userId    String   @id
+  deleted   Boolean  @default(false)
+  updatedAt DateTime @updatedAt
 }

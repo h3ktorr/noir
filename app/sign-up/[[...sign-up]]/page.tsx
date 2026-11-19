@@ -5,8 +5,61 @@ import { Loader2 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 
+
+type ClerkErrorLike = {
+  errors?: {
+    code?: string;
+    message?: string;
+    longMessage?: string;
+    meta?: {
+      paramName?: string;
+    };
+  }[];
+};
+
+function getClerkErrorMessage(error: unknown): string {
+  if (!error || typeof error !== 'object') {
+    return 'Something went wrong. Please try again.';
+  }
+
+  const clerkError = error as ClerkErrorLike;
+  const firstError = clerkError.errors?.[0];
+
+  if (!firstError) {
+    return 'Unable to complete your request. Please try again.';
+  }
+
+  switch (firstError.code) {
+    case 'form_password_pwned':
+      return 'This password has appeared in a data breach. Please choose a different, stronger password.';
+
+    case 'form_identifier_exists':
+      return 'An account with this email address already exists. Please sign in instead.';
+
+    case 'form_password_length_too_short':
+      return 'Your password is too short. Please choose a longer password.';
+
+    case 'form_password_not_strong_enough':
+      return 'Your password is not strong enough. Please choose a stronger password.';
+
+    case 'form_username_invalid':
+    case 'form_param_format_invalid':
+      return firstError.longMessage ||
+        firstError.message ||
+        'One or more fields contain invalid information. Please check your details.';
+
+    case 'too_many_requests':
+      return 'Too many attempts. Please wait a moment before trying again.';
+
+    default:
+      return firstError.longMessage ||
+        firstError.message ||
+        'Unable to create your account. Please check your details.';
+  }
+}
+
 export default function Page() {
-  const { signUp, errors, fetchStatus } = useSignUp()
+  const { signUp, fetchStatus } = useSignUp()
   const router = useRouter()
 
   const [emailAddress, setEmailAddress] = useState('')
@@ -64,7 +117,7 @@ export default function Page() {
 
       if (error) {
         console.error('Signup error:', JSON.stringify(error, null, 2))
-        setFormError('Unable to create your account. Please check your details.')
+        setFormError(getClerkErrorMessage(error))
         return
       }
 
@@ -279,10 +332,6 @@ export default function Page() {
           </button>
         </form>
 
-        {formError && (
-          <p className="text-sm text-red-500 mt-2">{formError}</p>
-        )}
-
         {/* CAPTCHA */}
         <div id="clerk-captcha" className="mt-3 w-full" />
 
@@ -329,9 +378,9 @@ export default function Page() {
             </>
           )}
         </button>
-        {formError && (
+        {/* {formError && (
           <p className="text-sm text-red-500 mt-2">{formError}</p>
-        )}
+        )} */}
 
         <p className="text-sm mt-2">
           Already have an account?{" "}

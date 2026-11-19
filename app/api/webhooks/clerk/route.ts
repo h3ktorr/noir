@@ -1,6 +1,8 @@
 import prisma from "@/lib/prisma";
 import { verifyWebhook } from "@clerk/nextjs/webhooks";
 import { NextRequest, NextResponse } from "next/server";
+import { clerkClient } from "@clerk/nextjs/server";
+import { Prisma } from "@prisma/client";
 
 export const runtime = "nodejs";
 
@@ -16,7 +18,61 @@ type ClerkUserPayload = {
   last_name: string | null;
 };
 
+async function isClerkUserActive(userId: string): Promise<boolean> {
+  const client = await clerkClient();
+
+  try {
+    await client.users.getUser(userId);
+    return true;
+  } catch (error) {
+    const status =
+      typeof error === "object" && error !== null && "status" in error
+        ? error.status
+        : undefined;
+
+    if (status === 404) {
+      console.warn(
+        "Ignoring stale webhook: Clerk user no longer exists:",
+        userId,
+      );
+
+      return false;
+    }
+
+    // Do not acknowledge temporary API or authentication failures.
+    throw error;
+  }
+}
+
+async function lockClerkUserState(
+  tx: Prisma.TransactionClient,
+  userId: string,
+): Promise<boolean> {
+  // Create the state record if it doesn't exist.
+  // If it already exists, acquire a lock on that row.
+  await tx.$executeRaw`
+    INSERT INTO ClerkUserSyncState (userId, deleted, updatedAt)
+    VALUES (${userId}, false, CURRENT_TIMESTAMP(3))
+    ON DUPLICATE KEY UPDATE userId = VALUES(userId)
+  `;
+
+  // Lock the row until the transaction completes.
+  const states = await tx.$queryRaw<{ deleted: boolean }[]>`
+    SELECT deleted
+    FROM ClerkUserSyncState
+    WHERE userId = ${userId}
+    FOR UPDATE
+  `;
+
+  // Fail closed if the state record unexpectedly cannot be found.
+  return states[0]?.deleted ?? true;
+}
+
 async function syncClerkUser(user: ClerkUserPayload) {
+  const isActive = await isClerkUserActive(user.id);
+
+  if (!isActive) return;
+
   const primaryEmail =
     user.email_addresses.find(
       (email) => email.id === user.primary_email_address_id,
@@ -42,28 +98,49 @@ async function syncClerkUser(user: ClerkUserPayload) {
   const displayName =
     `${user.first_name ?? ""} ${user.last_name ?? ""}`.trim() || null;
 
-  await prisma.user.upsert({
-    where: {
-      id: user.id,
-    },
-    update: {
-      email: primaryEmail,
-      username,
-    },
-    create: {
-      id: user.id,
-      email: primaryEmail,
-      username,
-      displayName,
-    },
+  await prisma.$transaction(async (tx) => {
+    const isDeleted = await lockClerkUserState(tx, user.id);
+
+    if (isDeleted) {
+      console.warn(
+        "Ignoring synchronization for permanently deleted Clerk user:",
+        user.id,
+      );
+      return;
+    }
+
+    await tx.user.upsert({
+      where: {
+        id: user.id,
+      },
+      update: {
+        email: primaryEmail,
+        username,
+      },
+      create: {
+        id: user.id,
+        email: primaryEmail,
+        username,
+        displayName,
+      },
+    });
   });
 
-  console.log("Prisma user successfully synchronized:", user.id);
+  console.log("Prisma user synchronization completed:", user.id);
 }
 
 // Permanently delete a user and all dependent records.
 async function deleteClerkUser(userId: string) {
   await prisma.$transaction(async (tx) => {
+    // Lock this user's synchronization state.
+    await lockClerkUserState(tx, userId);
+
+    // Permanently mark this Clerk ID as deleted.
+    await tx.clerkUserSyncState.update({
+      where: { userId },
+      data: { deleted: true },
+    });
+
     // 1. Find all posts created by this user.
     const originalPosts = await tx.post.findMany({
       where: { userId },
