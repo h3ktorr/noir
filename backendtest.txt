@@ -1,0 +1,103 @@
+Noir — Backend Security Audit
+Audit progress
+Not started
+
+0 / 9
+
+
+We begin after agreeing on the scope. No code changes have been made.
+
+Phase 1 — Server actions and resource ownership
+These are the operations that change database records or perform sensitive actions.
+#	File	What we'll audit
+1	action.ts	Follow/unfollow, like/unlike, repost/unrepost, save/unsave, comments, post creation, notifications, blocking, unblocking and reporting
+2	actions/updateProfile.ts	Authentication, profile ownership, allowed fields, input validation and unauthorized profile modification
+3	actions/fetchPost.ts	Authentication, post visibility, access to posts, comments and reposts
+4	actions/getFileDetails.ts	Authentication, file access and whether private file information is exposed
+
+Additional post and profile checks
+- Find any other post editing/deletion operations.
+- Ensure users cannot modify or delete another person's content.
+- Ensure users cannot change protected account fields, such as their Clerk ID or email, through profile updates.
+- Ensure all sensitive actions derive the acting user's ID from Clerk.
+Phase 2 — API route security
+We'll audit all seven API routes.
+#	File	What we'll audit
+5	app/api/posts/route.ts	Feed visibility, pagination, block filtering, reposts and private data exposure
+6	app/api/users/[userId]/follow/route.ts	Followers/following access, blocking, pagination and returned user information
+7	app/api/notifications/route.ts	Recipient ownership, cursor manipulation and notification data exposure
+8	app/api/notifications/unread/route.ts	Authentication and notification count isolation
+9	app/api/users/search/route.ts	Authentication, query validation, blocking and information exposure
+10	app/api/upload-auth/route.ts	Authentication, ImageKit credentials and upload abuse prevention
+
+Phase 3 — Database integrity and abuse prevention
+This phase covers the Prisma schema and operations across the application.
+
+We'll check:
+- [ ] Duplicate follows.
+- [ ] Duplicate saved posts.
+- [ ] Duplicate reports.
+- [ ] Duplicate likes and blocks (already protected by unique constraints).
+- [ ] Concurrent requests and race conditions.
+- [ ] Appropriate database indexes and constraints.
+- [ ] Whether deleting users or posts leaves unwanted related records.
+- [ ] Whether block relationships are respected consistently.
+We'll only create migrations where they're genuinely necessary.
+Phase 4 — Authentication and security boundary checks
+We'll verify:
+- [ ] All private backend operations reject unauthenticated requests.
+- [ ] Client-supplied IDs cannot impersonate another user.
+- [ ] Server actions validate their arguments, even when called directly.
+- [ ] API routes don't trust frontend restrictions.
+- [ ] Sensitive operations handle invalid or manipulated inputs safely.
+- [ ] Clerk webhooks remain protected by signature verification.
+- [ ] Socket.IO notifications cannot be sent to unauthorized rooms.
+- [ ] Errors don't expose secrets, internal credentials or sensitive database details.
+Phase 5 — Final security testing
+We'll test the important attack scenarios rather than relying only on code inspection.
+Test	Expected result
+Signed-out user calls a private action	Rejected
+User edits another user's profile	Rejected
+User deletes another user's post	Rejected
+User accesses another person's notifications	Rejected
+User manipulates a notification ID	No unauthorized update
+User accesses blocked user's restricted content	Denied
+User submits invalid post data	Rejected
+User submits duplicate follow/save/report requests	Handled safely
+User requests unauthorized uploads	Rejected or restricted
+
+
+Complete file inventory
+Here is the scope we're tracking:
+Server actions
+- action.ts
+- actions/updateProfile.ts
+- actions/fetchPost.ts
+- actions/getFileDetails.ts
+
+API routes
+- app/api/posts/route.ts
+- app/api/notifications/route.ts
+- app/api/notifications/unread/route.ts
+- app/api/users/search/route.ts
+- app/api/users/[userId]/follow/route.ts
+- app/api/upload-auth/route.ts
+- app/api/webhooks/clerk/route.ts
+
+Database
+- prisma/schema.prisma
+- Required migrations, if any
+
+Realtime security
+- server.js
+- lib/socket-server.ts and any Socket.IO authentication/authorization middleware
+
+One clarification: the Clerk webhook is already implemented and its stale-event protection was tested. We will verify its security without unnecessarily rewriting it.
+When will we consider the audit finished?
+We'll be finished when:
+1. Every listed server action and API route has been reviewed.
+2. Every identified security issue has either been fixed or explicitly documented as an accepted limitation.
+3. Necessary database migrations have been applied and verified.
+4. The critical authorization tests pass.
+5. Existing features still work: authentication, posts, comments, likes, follows, reposts, notifications, blocking, reporting, uploads and profile editing.
+Our working rule: One file or closely related group of operations at a time. Inspect, identify issues, agree on the fix, implement, run TypeScript checks, and test. Then mark that item complete.

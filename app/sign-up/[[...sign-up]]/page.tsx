@@ -6,13 +6,16 @@ import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 
 
+
 type ClerkErrorLike = {
   errors?: {
     code?: string;
     message?: string;
     longMessage?: string;
+    long_message?: string;
     meta?: {
       paramName?: string;
+      param_name?: string;
     };
   }[];
 };
@@ -23,18 +26,37 @@ function getClerkErrorMessage(error: unknown): string {
   }
 
   const clerkError = error as ClerkErrorLike;
+
   const firstError = clerkError.errors?.[0];
 
   if (!firstError) {
     return 'Unable to complete your request. Please try again.';
   }
 
+  const paramName =
+    firstError.meta?.paramName ??
+    firstError.meta?.param_name;
+
   switch (firstError.code) {
     case 'form_password_pwned':
       return 'This password has appeared in a data breach. Please choose a different, stronger password.';
 
     case 'form_identifier_exists':
+      if (paramName === 'username') {
+        return 'This username is already taken. Please choose another one.';
+      }
+
+      if (paramName === 'email_address') {
+        return 'An account with this email address already exists. Please sign in instead.';
+      }
+
+      return 'This information is already associated with an account. Please check your details.';
+
+    case 'email_address_exists':
       return 'An account with this email address already exists. Please sign in instead.';
+
+    case 'username_exists':
+      return 'This username is already taken. Please choose another one.';
 
     case 'form_password_length_too_short':
       return 'Your password is too short. Please choose a longer password.';
@@ -45,6 +67,7 @@ function getClerkErrorMessage(error: unknown): string {
     case 'form_username_invalid':
     case 'form_param_format_invalid':
       return firstError.longMessage ||
+        firstError.long_message ||
         firstError.message ||
         'One or more fields contain invalid information. Please check your details.';
 
@@ -53,6 +76,7 @@ function getClerkErrorMessage(error: unknown): string {
 
     default:
       return firstError.longMessage ||
+        firstError.long_message ||
         firstError.message ||
         'Unable to create your account. Please check your details.';
   }

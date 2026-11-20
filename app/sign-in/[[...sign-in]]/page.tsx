@@ -14,6 +14,21 @@ export default function Page() {
   const [password, setPassword] = useState('')
   const [isSigningIn, setIsSigningIn] = useState(false)
   const [isGoogleLoading, setIsGoogleLoading] = useState(false)
+  // Password recovery state
+const [isForgotPassword, setIsForgotPassword] = useState(false)
+const [resetCodeSent, setResetCodeSent] = useState(false)
+const [resetCodeVerified, setResetCodeVerified] = useState(false)
+
+const [resetCode, setResetCode] = useState('')
+const [newPassword, setNewPassword] = useState('')
+const [confirmNewPassword, setConfirmNewPassword] = useState('')
+
+const [resetError, setResetError] = useState('')
+const [resetMessage, setResetMessage] = useState('')
+
+const [isSendingResetCode, setIsSendingResetCode] = useState(false)
+const [isVerifyingResetCode, setIsVerifyingResetCode] = useState(false)
+const [isResettingPassword, setIsResettingPassword] = useState(false)
 
   const signInWith = async (strategy: OAuthStrategy) => {
     setIsGoogleLoading(true)
@@ -97,6 +112,298 @@ export default function Page() {
     }
   }
 
+
+  // STEP 1: Send password reset code
+  const handleSendResetCode = async (e: React.FormEvent) => {
+    e.preventDefault()
+
+    setIsSendingResetCode(true)
+    setResetError('')
+    setResetMessage('')
+
+    try {
+      const { error: createError } = await signIn.create({
+        identifier: emailAddress,
+      })
+
+      if (createError) {
+        console.error('Password reset initialization error:', createError)
+        setResetError(
+          createError.message || 'Unable to start password recovery.'
+        )
+        return
+      }
+
+      const { error: sendError } =
+        await signIn.resetPasswordEmailCode.sendCode()
+
+      if (sendError) {
+        console.error('Password reset code error:', sendError)
+        setResetError(
+          sendError.message || 'Unable to send your reset code.'
+        )
+        return
+      }
+
+      setResetCodeSent(true)
+      setResetMessage('A password reset code has been sent to your email.')
+    } catch (error) {
+      console.error('Password reset exception:', error)
+      setResetError('Something went wrong. Please try again.')
+    } finally {
+      setIsSendingResetCode(false)
+    }
+  }
+
+  // STEP 2: Verify password reset code
+  const handleVerifyResetCode = async (e: React.FormEvent) => {
+    e.preventDefault()
+
+    setIsVerifyingResetCode(true)
+    setResetError('')
+    setResetMessage('')
+
+    try {
+      const { error } =
+        await signIn.resetPasswordEmailCode.verifyCode({
+          code: resetCode,
+        })
+
+      if (error) {
+        console.error('Reset code verification error:', error)
+        setResetError(
+          error.message || 'Invalid or expired reset code.'
+        )
+        return
+      }
+
+      setResetCodeVerified(true)
+      setResetMessage('Email verified. You can now choose a new password.')
+    } catch (error) {
+      console.error('Reset verification exception:', error)
+      setResetError('Unable to verify the code. Please try again.')
+    } finally {
+      setIsVerifyingResetCode(false)
+    }
+  }
+
+  // STEP 3: Submit new password
+  const handleResetPassword = async (e: React.FormEvent) => {
+    e.preventDefault()
+
+    setResetError('')
+    setResetMessage('')
+
+    if (newPassword !== confirmNewPassword) {
+      setResetError('Your passwords do not match.')
+      return
+    }
+
+    setIsResettingPassword(true)
+
+    try {
+      const { error } =
+        await signIn.resetPasswordEmailCode.submitPassword({
+          password: newPassword,
+          signOutOfOtherSessions: true,
+        })
+
+      if (error) {
+        console.error('Password reset error:', error)
+        setResetError(
+          error.message || 'Unable to reset your password.'
+        )
+        return
+      }
+
+      if (signIn.status === 'complete') {
+        await finalizeSignIn()
+      } else {
+        console.error('Password reset incomplete:', signIn.status)
+        setResetError(
+          'Your password was submitted, but additional authentication is required.'
+        )
+      }
+    } catch (error) {
+      console.error('Password reset exception:', error)
+      setResetError('Something went wrong while resetting your password.')
+    } finally {
+      setIsResettingPassword(false)
+    }
+  }
+
+
+  if (isForgotPassword) {
+    return (
+      <div className="fixed z-50 top-0 w-screen bg-background h-screen flex justify-center items-center overflow-auto">
+        <div className="bg-foreground m-auto w-3/4 md:w-[50vw] p-4 sm:px-12 rounded-2xl flex flex-col items-center text-background py-12">
+
+          <h3 className="text-2xl font-bold">
+            Reset Your Password
+          </h3>
+
+          <p className="mt-2 text-center text-sm">
+            {!resetCodeSent
+              ? 'Enter your email address to receive a reset code.'
+              : !resetCodeVerified
+                ? 'Enter the code sent to your email address.'
+                : 'Choose a new password for your account.'}
+          </p>
+
+          {!resetCodeSent && (
+            <form
+              onSubmit={handleSendResetCode}
+              className="flex flex-col mt-6 gap-3 w-full px-8"
+            >
+              <label className="text-sm font-medium">
+                Email Address
+              </label>
+
+              <input
+                type="email"
+                value={emailAddress}
+                onChange={(e) => setEmailAddress(e.target.value)}
+                placeholder="Enter your registered email"
+                required
+                className="w-full p-2 rounded-lg text-background border border-background"
+              />
+
+              <button
+                type="submit"
+                disabled={isSendingResetCode}
+                className="bg-background text-foreground px-4 py-2 rounded-lg mt-4 disabled:opacity-50"
+              >
+                {isSendingResetCode ? (
+                  <span className="flex items-center justify-center gap-2">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Sending code...
+                  </span>
+                ) : (
+                  'Send Reset Code'
+                )}
+              </button>
+            </form>
+          )}
+
+          {resetCodeSent && !resetCodeVerified && (
+            <form
+              onSubmit={handleVerifyResetCode}
+              className="flex flex-col mt-6 gap-3 w-full px-8"
+            >
+              <label className="text-sm font-medium">
+                Verification Code
+              </label>
+
+              <input
+                type="text"
+                value={resetCode}
+                onChange={(e) => setResetCode(e.target.value)}
+                placeholder="Enter your reset code"
+                required
+                className="w-full p-2 rounded-lg text-background border border-background"
+              />
+
+              <button
+                type="submit"
+                disabled={isVerifyingResetCode}
+                className="bg-background text-foreground px-4 py-2 rounded-lg mt-4 disabled:opacity-50"
+              >
+                {isVerifyingResetCode ? (
+                  <span className="flex items-center justify-center gap-2">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Verifying...
+                  </span>
+                ) : (
+                  'Verify Code'
+                )}
+              </button>
+            </form>
+          )}
+
+          {resetCodeVerified && (
+            <form
+              onSubmit={handleResetPassword}
+              className="flex flex-col mt-6 gap-3 w-full px-8"
+            >
+              <label className="text-sm font-medium">
+                New Password
+              </label>
+
+              <input
+                type="password"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                placeholder="Enter your new password"
+                required
+                className="w-full p-2 rounded-lg text-background border border-background"
+              />
+
+              <label className="text-sm font-medium">
+                Confirm New Password
+              </label>
+
+              <input
+                type="password"
+                value={confirmNewPassword}
+                onChange={(e) => setConfirmNewPassword(e.target.value)}
+                placeholder="Confirm your new password"
+                required
+                className="w-full p-2 rounded-lg text-background border border-background"
+              />
+              
+              <button
+                type="submit"
+                disabled={isResettingPassword}
+                className="bg-background text-foreground px-4 py-2 rounded-lg mt-4 flex items-center justify-center gap-2 hover:bg-primary/80 transition disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isResettingPassword ? (
+                  <>
+                    <Loader2 className="h-5 w-5 animate-spin" />
+                    Resetting password...
+                  </>
+                ) : (
+                  'Reset Password'
+                )}
+              </button>
+
+            </form>
+          )}
+
+          {resetError && (
+            <p className="text-sm text-red-500 mt-4 text-center px-8">
+              {resetError}
+            </p>
+          )}
+
+          {resetMessage && (
+            <p className="text-sm text-green-500 mt-4 text-center px-8">
+              {resetMessage}
+            </p>
+          )}
+
+          <button
+            type="button"
+            onClick={async () => {
+              await signIn.reset()
+              setIsForgotPassword(false)
+              setResetCodeSent(false)
+              setResetCodeVerified(false)
+              setResetCode('')
+              setNewPassword('')
+              setConfirmNewPassword('')
+              setResetError('')
+              setResetMessage('')
+            }}
+            className="text-sm text-purple-400 hover:underline mt-6"
+          >
+            Back to Sign In
+          </button>
+
+        </div>
+      </div>
+    )
+  }
+
   console.log(errors)
 
   return (
@@ -132,6 +439,20 @@ export default function Page() {
             placeholder="Enter your password"
             className="w-full p-2 rounded-lg text-background border border-background"
           />
+
+          <div className="flex justify-end">
+            <button
+              type="button"
+              onClick={() => {
+                setResetError('')
+                setResetMessage('')
+                setIsForgotPassword(true)
+              }}
+              className="text-sm text-purple-400 hover:underline"
+            >
+              Forgot password?
+            </button>
+          </div>
 
           {errors.fields.password && (
             <p>{errors.fields.password.message}</p>

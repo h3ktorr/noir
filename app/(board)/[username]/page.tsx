@@ -103,7 +103,7 @@ const page = async ({params}:{params: Promise< {username: string} >}) => {
                     {!blockStatus.isBlockedByMe && !blockStatus.hasBlockedMe && (
                       <FollowButton
                         userId={user.id}
-                        isFollowed={!!user.following.length}
+                        isFollowed={!!user.following?.length}
                       />
                     )}
                   </>

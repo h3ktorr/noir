@@ -1,25 +1,22 @@
 import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
 
-const isProtectedRoute = createRouteMatcher(["/"]);
-
-const isWebhookRoute = createRouteMatcher(["/api/webhooks(.*)"]);
+// Routes that must remain accessible without authentication.
+const isPublicRoute = createRouteMatcher([
+  "/sign-in(.*)",
+  "/sign-up(.*)",
+  "/sso-callback(.*)",
+  "/api/webhooks(.*)",
+]);
 
 export default clerkMiddleware(
   async (auth, req) => {
-    // Let Clerk webhook requests pass through without authentication
-    if (isWebhookRoute(req)) {
+    // Allow authentication pages, OAuth callback and Clerk webhooks.
+    if (isPublicRoute(req)) {
       return;
     }
 
-    const { userId } = await auth();
-
-    if (isProtectedRoute(req)) {
-      if (!userId) {
-        return (await auth()).redirectToSignIn();
-      }
-
-      await auth.protect();
-    }
+    // Require authentication for every other matched route.
+    await auth.protect();
   },
   {
     signInUrl: "/sign-in",
