@@ -35,6 +35,11 @@ model User {
 
   reportsSent     Report[] @relation("UserReports")
   reportsReceived Report[] @relation("UserReported")
+
+  isOfficial Boolean @default(false)
+
+  stories    Story[]
+  storyViews StoryView[]
 }
 
 model Post {
@@ -108,6 +113,16 @@ enum NotificationType {
   FOLLOW
 }
 
+enum StoryMediaType {
+  IMAGE
+  VIDEO
+}
+
+enum StoryVisibility {
+  PUBLIC
+  FOLLOWERS
+}
+
 model Notification {
   id        String           @id @default(cuid())
   createdAt DateTime         @default(now())
@@ -162,4 +177,37 @@ model ClerkUserSyncState {
   userId    String   @id
   deleted   Boolean  @default(false)
   updatedAt DateTime @updatedAt
+}
+
+model Story {
+  id        Int       @id @default(autoincrement())
+  createdAt DateTime  @default(now())
+  expiresAt DateTime?
+
+  mediaUrl   String          @db.VarChar(1000)
+  mediaType  StoryMediaType
+  isWelcome  Boolean         @default(false)
+  visibility StoryVisibility @default(FOLLOWERS)
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  views StoryView[]
+
+  @@index([userId, expiresAt])
+  @@index([isWelcome, expiresAt])
+}
+
+model StoryView {
+  id       Int      @id @default(autoincrement())
+  viewedAt DateTime @default(now())
+
+  storyId  Int
+  viewerId String
+
+  story  Story @relation(fields: [storyId], references: [id], onDelete: Cascade)
+  viewer User  @relation(fields: [viewerId], references: [id], onDelete: Cascade)
+
+  @@unique([storyId, viewerId])
+  @@index([viewerId, viewedAt])
 }
