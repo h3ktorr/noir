@@ -7,6 +7,7 @@ import ImageComp from "./ImageComp";
 import StoryViewer from "./StoryViewer";
 import { Plus, ShieldCheck } from "lucide-react";
 import type { getStories } from "@/actions/getStories";
+import CreateStory from "./CreateStory";
 
 type StoriesData = Awaited<ReturnType<typeof getStories>>;
 
@@ -16,6 +17,7 @@ type StoriesClientProps = {
 
 export default function StoriesClient({ users }: StoriesClientProps) {
   const [activeUserIndex, setActiveUserIndex] = useState<number | null>(null);
+  const [createStoryOpen, setCreateStoryOpen] = useState(false);
 
   const imageKitURL = process.env.NEXT_PUBLIC_URL_ENDPOINT;
 
@@ -24,6 +26,7 @@ export default function StoriesClient({ users }: StoriesClientProps) {
       <div className="w-screen md:w-[calc(100vw-96px)] flex gap-4 overflow-x-auto overflow-y-hidden p-4 no-scrollbar border-b pb-6">
         <button
           type="button"
+          onClick={() => setCreateStoryOpen(true)}
           className="w-36 md:min-w-52 h-50 md:h-64 shrink-0 rounded-2xl border flex flex-col items-center justify-center gap-4"
         >
           <Plus size={40} className="text-foreground" />
@@ -100,6 +103,9 @@ export default function StoriesClient({ users }: StoriesClientProps) {
           initialUserIndex={activeUserIndex}
           onClose={() => setActiveUserIndex(null)}
         />
+      )}
+      {createStoryOpen && (
+        <CreateStory onClose={() => setCreateStoryOpen(false)} />
       )}
     </>
   );
