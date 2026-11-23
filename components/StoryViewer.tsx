@@ -14,25 +14,36 @@ type StoriesData = Awaited<ReturnType<typeof getStories>>;
 type StoryViewerProps = {
   users: StoriesData;
   initialUserIndex: number;
+  initialStoryIndex: number;
   onClose: () => void;
+  onStoryViewed: (storyId: number) => void;
 };
 
 const IMAGE_DURATION = 5000;
 
-function getMediaUrl(path: string) {
-  if (path.startsWith("http")) return path;
-
+function getMediaUrl(path: string, mediaType: string) {
   const endpoint = process.env.NEXT_PUBLIC_URL_ENDPOINT?.replace(/\/$/, "");
-  return `${endpoint}/${path.replace(/^\//, "")}`;
+
+  const mediaUrl = path.startsWith("http")
+    ? path
+    : `${endpoint}/${path.replace(/^\/+/, "")}`;
+
+  if (mediaType === "VIDEO") {
+    return `${mediaUrl}?tr=w-720,q-50`;
+  }
+
+  return mediaUrl;
 }
 
 export default function StoryViewer({
   users,
   initialUserIndex,
+  initialStoryIndex,
   onClose,
+  onStoryViewed,
 }: StoryViewerProps) {
   const [userIndex, setUserIndex] = useState(initialUserIndex);
-  const [storyIndex, setStoryIndex] = useState(0);
+  const [storyIndex, setStoryIndex] = useState(initialStoryIndex);
   const [progress, setProgress] = useState(0);
 
   const [viewersOpen, setViewersOpen] = useState(false);
@@ -56,9 +67,15 @@ export default function StoryViewer({
 
    async function loadStoryViews() {
      try {
-       await recordStoryView(currentStory!.id);
+       const viewResult = await recordStoryView(currentStory!.id);
 
-       const result = await getStoryViewers(currentStory!.id);
+        if (cancelled) return;
+
+        if (viewResult.success && viewResult.shouldMarkViewed) {
+          onStoryViewed(currentStory!.id);
+        }
+
+        const result = await getStoryViewers(currentStory!.id);
 
        if (cancelled) return;
 
@@ -86,7 +103,7 @@ export default function StoryViewer({
    return () => {
      cancelled = true;
    };
- }, [currentStory?.id]);
+ }, [currentStory?.id, onStoryViewed]);
 
   const nextStory = useCallback(() => {
     if (!currentUser) return;
@@ -181,7 +198,10 @@ export default function StoryViewer({
 
   if (!currentUser || !currentStory) return null;
 
-  const mediaUrl = getMediaUrl(currentStory.mediaUrl);
+  const mediaUrl = getMediaUrl(
+    currentStory.mediaUrl,
+    currentStory.mediaType,
+  );
 
   return (
     <div className="fixed inset-0 z-50 bg-black text-white flex items-center justify-center">

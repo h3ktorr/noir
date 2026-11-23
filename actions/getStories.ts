@@ -12,6 +12,24 @@ export async function getStories() {
 
   const now = new Date();
 
+  const viewer = await prisma.user.findUnique({
+    where: {
+      id: userId,
+    },
+    select: {
+      createdAt: true,
+    },
+  });
+
+  if (!viewer) {
+    return [];
+  }
+
+  const twentyFourHours = 24 * 60 * 60 * 1000;
+
+  const canSeeWelcomeStory =
+    now.getTime() - viewer.createdAt.getTime() < twentyFourHours;
+
   // Find accounts the current user follows.
   const following = await prisma.follow.findMany({
     where: {
@@ -36,7 +54,9 @@ export async function getStories() {
   });
 
   const blockedIds = new Set(
-    blocks.flatMap((block) => [block.blockerId, block.blockedId]),
+    blocks.map((block) =>
+      block.blockerId === userId ? block.blockedId : block.blockerId,
+    ),
   );
 
   // Retrieve accounts with stories the viewer is allowed to see.
@@ -92,6 +112,20 @@ export async function getStories() {
                 },
               ],
             },
+            ...(!canSeeWelcomeStory
+              ? [
+                  {
+                    NOT: {
+                      isWelcome: true,
+                      user: {
+                        is: {
+                          isOfficial: true,
+                        },
+                      },
+                    },
+                  },
+                ]
+              : []),
           ],
         },
         orderBy: {
@@ -105,6 +139,14 @@ export async function getStories() {
           isWelcome: true,
           createdAt: true,
           expiresAt: true,
+          views: {
+            where: {
+              viewerId: userId,
+            },
+            select: {
+              id: true,
+            },
+          },
         },
       },
     },

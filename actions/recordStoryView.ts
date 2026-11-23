@@ -7,7 +7,11 @@ export async function recordStoryView(storyId: number) {
   const { userId } = await auth();
 
   if (!userId) {
-    return { success: false, message: "Not authenticated" };
+    return {
+      success: false,
+      message: "Not authenticated",
+      shouldMarkViewed: false,
+    };
   }
 
   // Find the story and its owner.
@@ -28,17 +32,49 @@ export async function recordStoryView(storyId: number) {
   });
 
   if (!story) {
-    return { success: false, message: "Story not found" };
+    return {
+      success: false,
+      message: "Story not found",
+      shouldMarkViewed: false,
+    };
   }
 
   // Expired stories cannot receive views.
   if (story.expiresAt && story.expiresAt <= new Date()) {
-    return { success: false, message: "Story has expired" };
+    return {
+      success: false,
+      message: "Story has expired",
+      shouldMarkViewed: false,
+    };
+  }
+
+  if (story.isWelcome && story.user.isOfficial) {
+    const viewer = await prisma.user.findUnique({
+      where: {
+        id: userId,
+      },
+      select: {
+        createdAt: true,
+      },
+    });
+
+    const twentyFourHours = 24 * 60 * 60 * 1000;
+
+    if (
+      !viewer ||
+      new Date().getTime() - viewer.createdAt.getTime() >= twentyFourHours
+    ) {
+      return {
+        success: false,
+        message: "Welcome story is no longer available",
+        shouldMarkViewed: false,
+      };
+    }
   }
 
   // Do not count the owner's own views.
   if (story.userId === userId) {
-    return { success: true };
+    return { success: true, shouldMarkViewed: false };
   }
 
   // Check whether either account has blocked the other.
@@ -53,7 +89,11 @@ export async function recordStoryView(storyId: number) {
   });
 
   if (block) {
-    return { success: false, message: "Access denied" };
+    return {
+      success: false,
+      message: "Access denied",
+      shouldMarkViewed: false,
+    };
   }
 
   // Followers-only stories require an active follow relationship.
@@ -70,7 +110,11 @@ export async function recordStoryView(storyId: number) {
     });
 
     if (!follow) {
-      return { success: false, message: "Access denied" };
+      return {
+        success: false,
+        message: "Access denied",
+        shouldMarkViewed: false,
+      };
     }
   }
 
@@ -89,5 +133,5 @@ export async function recordStoryView(storyId: number) {
     },
   });
 
-  return { success: true };
+  return { success: true, shouldMarkViewed: true };
 }
