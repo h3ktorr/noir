@@ -10,6 +10,7 @@ import EditProfile from "@/components/EditProfile";
 import ProfileActions from "@/components/ProfileActions";
 import { getBlockStatus } from "@/action";
 import ProfileFollowStats from "@/components/ProfileFollowStats";
+import MessageButton from "@/components/MessageButton";
 
 const page = async ({params}:{params: Promise< {username: string} >}) => {
     const { username } = await params;
@@ -101,10 +102,13 @@ const page = async ({params}:{params: Promise< {username: string} >}) => {
                     />
 
                     {!blockStatus.isBlockedByMe && !blockStatus.hasBlockedMe && (
-                      <FollowButton
-                        userId={user.id}
-                        isFollowed={!!user.following?.length}
-                      />
+                      <>
+                        <MessageButton userId={user.id} />
+                        <FollowButton
+                          userId={user.id}
+                          isFollowed={!!user.following?.length}
+                        />
+                      </>
                     )}
                   </>
                 )}

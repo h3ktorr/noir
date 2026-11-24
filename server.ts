@@ -10,8 +10,11 @@ const port = 3100;
 const app = next({ dev, hostname, port });
 const handler = app.getRequestHandler();
 
-app.prepare().then(() => {
-  const httpServer = createServer(handler);
+app.prepare().then(async () => {
+  const { default: prisma } = await import("@/lib/prisma");
+  const httpServer = createServer((req, res) => {
+    handler(req, res);
+  });
 
   const io = new Server(httpServer, {
     cors: {
@@ -38,8 +41,8 @@ app.prepare().then(() => {
         secretKey,
         authorizedParties: [
           "http://localhost:3100",
-          process.env.CLIENT_URL,
-        ].filter(Boolean),
+          ...(process.env.CLIENT_URL ? [process.env.CLIENT_URL] : []),
+        ],
       });
 
       if (!verifiedToken.sub) {
@@ -67,6 +70,61 @@ app.prepare().then(() => {
 
     console.log("Authenticated user connected:", userId);
     console.log(`Joined room: user:${userId}`);
+
+    // Allow users to join only conversations they actively participate in.
+    socket.on(
+      "conversation:join",
+      async (
+        conversationId: unknown,
+        acknowledge?: (result: { success: boolean; error?: string }) => void,
+      ) => {
+        const respond = (result: { success: boolean; error?: string }) => {
+          if (typeof acknowledge === "function") {
+            acknowledge(result);
+          }
+        };
+
+        if (typeof conversationId !== "string" || !conversationId.trim()) {
+          return respond({
+            success: false,
+            error: "Invalid conversation ID",
+          });
+        }
+
+        try {
+          const participant = await prisma.conversationParticipant.findFirst({
+            where: {
+              conversationId,
+              userId,
+              archivedAt: null,
+            },
+            select: {
+              id: true,
+            },
+          });
+
+          if (!participant) {
+            return respond({
+              success: false,
+              error: "Conversation not found or access denied",
+            });
+          }
+
+          await socket.join(`conversation:${conversationId}`);
+
+          console.log(`User ${userId} joined conversation:${conversationId}`);
+
+          respond({ success: true });
+        } catch (error) {
+          console.error("Conversation room authorization failed:", error);
+
+          respond({
+            success: false,
+            error: "Unable to join conversation",
+          });
+        }
+      },
+    );
 
     socket.on("disconnect", () => {
       console.log("User disconnected:", userId);

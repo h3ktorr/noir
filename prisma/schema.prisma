@@ -40,6 +40,11 @@ model User {
 
   stories    Story[]
   storyViews StoryView[]
+
+  //MESSAGING
+  conversationParticipants ConversationParticipant[]
+  sentMessages             Message[]
+  createdConversations     Conversation[]            @relation("ConversationCreator")
 }
 
 model Post {
@@ -121,6 +126,17 @@ enum StoryMediaType {
 enum StoryVisibility {
   PUBLIC
   FOLLOWERS
+}
+
+enum MessageType {
+  TEXT
+  IMAGE
+  VIDEO
+}
+
+enum ParticipantRole {
+  MEMBER
+  ADMIN
 }
 
 model Notification {
@@ -210,4 +226,71 @@ model StoryView {
 
   @@unique([storyId, viewerId])
   @@index([viewerId, viewedAt])
+}
+
+model Conversation {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  isGroup Boolean @default(false)
+  name    String?
+  img     String?
+
+  // Used to prevent duplicate one-to-one conversations
+  directKey String? @unique
+
+  // Group creator
+  createdById String?
+  createdBy   User?   @relation("ConversationCreator", fields: [createdById], references: [id], onDelete: SetNull)
+
+  participants ConversationParticipant[]
+  messages     Message[]
+
+  @@index([updatedAt])
+}
+
+model ConversationParticipant {
+  id       Int      @id @default(autoincrement())
+  joinedAt DateTime @default(now())
+
+  lastReadAt DateTime?
+  archivedAt DateTime?
+  isMuted    Boolean   @default(false)
+
+  role ParticipantRole @default(MEMBER)
+
+  conversationId String
+  userId         String
+
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([conversationId, userId])
+  @@index([userId, archivedAt])
+}
+
+model Message {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  content   String?     @db.Text
+  type      MessageType @default(TEXT)
+  mediaUrl  String?     @db.VarChar(1000)
+  deletedAt DateTime?
+
+  conversationId String
+  senderId       String
+
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sender       User         @relation(fields: [senderId], references: [id], onDelete: Cascade)
+
+  // Reply to another message
+  replyToId String?
+  replyTo   Message?  @relation("MessageReplies", fields: [replyToId], references: [id], onDelete: SetNull)
+  replies   Message[] @relation("MessageReplies")
+
+  @@index([conversationId, createdAt])
+  @@index([senderId, createdAt])
 }

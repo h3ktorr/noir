@@ -3,9 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "node server.js",
+    "dev": "tsx server.ts",
     "build": "prisma generate && next build",
-    "start": "NODE_ENV=production node server.js",
+    "start": "tsx server.ts",
     "lint": "eslint"
   },
   "dependencies": {
@@ -43,7 +43,7 @@
     "eslint-config-next": "16.1.1",
     "prisma": "^7.7.0",
     "tailwindcss": "^4",
-    "tsx": "^4.21.0",
+    "tsx": "^4.23.15",
     "typescript": "^5"
   },
   "prisma": {
