@@ -8,6 +8,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useUser } from "@clerk/nextjs";
 import { socket } from "@/socket";
+import { getUnreadMessageCount } from "@/actions/getUnreadMessageCount";
 
 const Sidebar = () => {
   const { openCreatePost } = useContext(AppContext)!;
@@ -17,6 +18,7 @@ const Sidebar = () => {
   const username = user?.username;
 
   const [unreadCount, setUnreadCount] = useState(0);
+  const [unreadMessageCount, setUnreadMessageCount] = useState(0);
 
   useEffect(() => {
     if (!isLoaded || !user) return;
@@ -76,6 +78,37 @@ const Sidebar = () => {
     };
   }, [user, isLoaded]);
 
+  useEffect(() => {
+    if (!isLoaded || !user) return;
+
+    let cancelled = false;
+
+    const fetchUnreadMessages = async () => {
+      try {
+        const count = await getUnreadMessageCount();
+
+        if (!cancelled) {
+          setUnreadMessageCount(count);
+        }
+      } catch (error) {
+        console.error("Failed to fetch unread messages:", error);
+      }
+    };
+
+    fetchUnreadMessages();
+
+    const handleInboxUpdate = () => {
+      fetchUnreadMessages();
+    };
+
+    socket.on("inbox:update", handleInboxUpdate);
+
+    return () => {
+      cancelled = true;
+      socket.off("inbox:update", handleInboxUpdate);
+    };
+  }, [user, isLoaded]);
+
   return (
     <aside
       className="
@@ -98,12 +131,23 @@ const Sidebar = () => {
         />
       </Link>
 
-      <Link href="/messages">
+      <Link href="/messages" className="relative">
         <Mail
           size={32}
           className="md:w-11.25 md:h-11.25"
           fill={pathname.startsWith("/messages") ? "currentColor" : "none"}
         />
+
+        {unreadMessageCount > 0 && (
+          <span className="
+            absolute -top-2 -right-2
+            flex h-5 min-w-5 items-center justify-center
+            rounded-full bg-red-500 px-1
+            text-[10px] font-bold text-white
+          ">
+            {unreadMessageCount > 99 ? "99+" : unreadMessageCount}
+          </span>
+        )}
       </Link>
 
       <Link href="/notifications" className="relative">

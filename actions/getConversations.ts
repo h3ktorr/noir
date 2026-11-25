@@ -54,17 +54,45 @@ export async function getConversations() {
     },
   });
 
-  return conversations.map((conversation) => ({
-    id: conversation.id,
-    isGroup: conversation.isGroup,
-    name: conversation.name,
-    img: conversation.img,
-    updatedAt: conversation.updatedAt,
+  return Promise.all(
+    conversations.map(async (conversation) => {
+      const currentParticipant = conversation.participants.find(
+        (participant) => participant.userId === userId,
+      );
 
-    participants: conversation.participants
-      .filter((participant) => participant.userId !== userId)
-      .map((participant) => participant.user),
+      const lastReadAt = currentParticipant?.lastReadAt;
 
-    lastMessage: conversation.messages[0] ?? null,
-  }));
+      const unreadCount = await prisma.message.count({
+        where: {
+          conversationId: conversation.id,
+          senderId: {
+            not: userId,
+          },
+          deletedAt: null,
+          ...(lastReadAt
+            ? {
+                createdAt: {
+                  gt: lastReadAt,
+                },
+              }
+            : {}),
+        },
+      });
+
+      return {
+        id: conversation.id,
+        isGroup: conversation.isGroup,
+        name: conversation.name,
+        img: conversation.img,
+        updatedAt: conversation.updatedAt,
+
+        participants: conversation.participants
+          .filter((participant) => participant.userId !== userId)
+          .map((participant) => participant.user),
+
+        lastMessage: conversation.messages[0] ?? null,
+        unreadCount,
+      };
+    }),
+  );
 }

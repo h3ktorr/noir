@@ -2,6 +2,7 @@
 
 import { auth } from "@clerk/nextjs/server";
 import prisma from "@/lib/prisma";
+import { getIO } from "@/lib/socket-server";
 
 export async function sendMessage(conversationId: string, content: string) {
   const { userId } = await auth();
@@ -88,6 +89,16 @@ export async function sendMessage(conversationId: string, content: string) {
     data: {
       updatedAt: new Date(),
     },
+  });
+
+  const io = getIO();
+
+  io?.to(`conversation:${conversationId}`).emit("message:new", message);
+
+  conversation.participants.forEach((participant) => {
+    io?.to(`user:${participant.userId}`).emit("inbox:update", {
+      conversationId,
+    });
   });
 
   return {

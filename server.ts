@@ -5,7 +5,7 @@ import { verifyToken } from "@clerk/backend";
 
 const dev = process.env.NODE_ENV !== "production";
 const hostname = "localhost";
-const port = 3100;
+const port = 3300;
 
 const app = next({ dev, hostname, port });
 const handler = app.getRequestHandler();
@@ -18,7 +18,7 @@ app.prepare().then(async () => {
 
   const io = new Server(httpServer, {
     cors: {
-      origin: dev ? "http://localhost:3100" : process.env.CLIENT_URL,
+      origin: dev ? "http://localhost:3300" : process.env.CLIENT_URL,
       methods: ["GET", "POST"],
     },
   });
@@ -40,7 +40,7 @@ app.prepare().then(async () => {
       const verifiedToken = await verifyToken(token, {
         secretKey,
         authorizedParties: [
-          "http://localhost:3100",
+          "http://localhost:3300",
           ...(process.env.CLIENT_URL ? [process.env.CLIENT_URL] : []),
         ],
       });
@@ -125,6 +125,16 @@ app.prepare().then(async () => {
         }
       },
     );
+
+    socket.on("conversation:leave", (conversationId: unknown) => {
+      if (typeof conversationId !== "string" || !conversationId.trim()) {
+        return;
+      }
+
+      socket.leave(`conversation:${conversationId}`);
+
+      console.log(`User ${userId} left conversation:${conversationId}`);
+    });
 
     socket.on("disconnect", () => {
       console.log("User disconnected:", userId);

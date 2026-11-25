@@ -2,6 +2,8 @@
 import ImageComp from "./ImageComp";
 import { getConversations } from "@/actions/getConversations";
 import { formatDistanceToNow } from "date-fns";
+import Link from "next/link";
+import InboxRealtimeRefresh from "./InboxRealtimeRefresh";
 
 type Conversations = Awaited<ReturnType<typeof getConversations>>;
 
@@ -12,6 +14,7 @@ const AllMessages = ({
 }) => {
   return (
     <div className="w-full lg:w-1/2 h-full border-r flex flex-col">
+      <InboxRealtimeRefresh />
       {/* Header */}
       <div className="p-4 border-b">
         <h1 className="text-2xl font-bold">Messages</h1>
@@ -55,8 +58,9 @@ const AllMessages = ({
                   : lastMessage.content || "Message";
 
             return (
-              <div
+              <Link
                 key={conversation.id}
+                href={`/messages?conversationId=${conversation.id}`}
                 className="flex items-center mb-4 p-2 hover:bg-foreground/5 rounded-lg cursor-pointer"
               >
                 <ImageComp
@@ -75,15 +79,25 @@ const AllMessages = ({
                   </p>
                 </div>
 
-                <span className="ml-2 text-xs text-foreground/50 shrink-0">
-                  {formatDistanceToNow(
-                    new Date(
-                      lastMessage?.createdAt ?? conversation.updatedAt,
-                    ),
-                    { addSuffix: true },
+                <div className="ml-2 flex flex-col items-end gap-2 shrink-0">
+                  <span className="text-xs text-foreground/50">
+                    {formatDistanceToNow(
+                      new Date(
+                        lastMessage?.createdAt ?? conversation.updatedAt,
+                      ),
+                      { addSuffix: true },
+                    )}
+                  </span>
+
+                  {conversation.unreadCount > 0 && (
+                    <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white">
+                      {conversation.unreadCount > 99
+                        ? "99+"
+                        : conversation.unreadCount}
+                    </span>
                   )}
-                </span>
-              </div>
+                </div>
+              </Link>
             );
           })
         )}

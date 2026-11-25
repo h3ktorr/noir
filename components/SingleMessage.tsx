@@ -7,6 +7,9 @@ import type { getConversation } from "@/actions/getConversation";
 import { sendMessage } from "@/actions/sendMessage";
 import { formatDistanceToNow } from "date-fns";
 import { useEffect, useRef, useState } from "react";
+import { socket } from "@/socket";
+import { markConversationAsRead } from "@/actions/markConversationAsRead";
+import { useRouter } from "next/navigation";
 
 type Conversation = NonNullable<
   Awaited<ReturnType<typeof getConversation>>
@@ -17,9 +20,13 @@ const SingleMessage = ({
 }: {
   conversation: Conversation | null;
 }) => {
+  const router = useRouter();
+
   const [messages, setMessages] = useState(
     conversation?.messages ?? [],
   );
+
+  const [hasMounted, setHasMounted] = useState(false);
   const [content, setContent] = useState("");
   const [isSending, setIsSending] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -28,9 +35,96 @@ const SingleMessage = ({
     setMessages(conversation?.messages ?? []);
   }, [conversation]);
 
+  
+  useEffect(() => {
+    const conversationId = conversation?.id;
+    
+    if (!conversationId) return;
+    
+    const handleNewMessage = (
+      message: Conversation["messages"][number],
+    ) => {
+      if (message.conversationId !== conversationId) return;
+      
+      setMessages((previousMessages) => {
+        // Prevent duplicate messages, including the sender's own broadcast.
+        if (previousMessages.some((item) => item.id === message.id)) {
+          return previousMessages;
+        }
+        
+        return [...previousMessages, message];
+      });
+    };
+
+    
+    const joinConversation = () => {
+      socket.emit(
+        "conversation:join",
+        conversationId,
+        (result: { success: boolean; error?: string }) => {
+          if (!result.success) {
+            console.error(
+              "Unable to join conversation:",
+              result.error,
+            );
+          } else {
+            console.log("Joined conversation:", conversationId);
+          }
+        },
+      );
+    };
+    
+    socket.on("message:new", handleNewMessage);
+    socket.on("connect", joinConversation);
+
+    // Handle the case where Socket.IO is already connected.
+    if (socket.connected) {
+      joinConversation();
+    }
+
+    return () => {
+      socket.off("message:new", handleNewMessage);
+      socket.off("connect", joinConversation);
+      
+      if (socket.connected) {
+        socket.emit("conversation:leave", conversationId);
+      }
+    };
+  }, [conversation?.id]);
+  
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
+  
+  useEffect(() => {
+    setHasMounted(true);
+  }, []);
+
+  useEffect(() => {
+    const conversationId = conversation?.id;
+
+    if (!conversationId) return;
+
+    let cancelled = false;
+
+    const markAsRead = async () => {
+      try {
+        const result = await markConversationAsRead(conversationId);
+
+        if (!cancelled && result.success) {
+          router.refresh();
+        }
+      } catch (error) {
+        console.error("Failed to mark conversation as read:", error);
+      }
+    };
+
+    markAsRead();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [conversation?.id, router]);
 
   if (!conversation) {
     return (
@@ -45,9 +139,9 @@ const SingleMessage = ({
   const otherParticipant = conversation.participants.find(
     (participant) => participant.id !== conversation.currentUserId,
   );
-
+  
   const name = conversation.isGroup
-    ? conversation.name || "Group conversation"
+  ? conversation.name || "Group conversation"
     : otherParticipant?.displayName ||
       otherParticipant?.username ||
       "Unknown user";
@@ -81,10 +175,17 @@ const SingleMessage = ({
 
       const sentMessage = result.message;
 
-      setMessages((previousMessages) => [
-        ...previousMessages,
-        sentMessage,
-      ]);
+      setMessages((previousMessages) => {
+        if (
+          previousMessages.some(
+            (message) => message.id === sentMessage.id,
+          )
+        ) {
+          return previousMessages;
+        }
+
+        return [...previousMessages, sentMessage];
+      });
 
       setContent("");
     } catch (error) {
@@ -158,9 +259,11 @@ const SingleMessage = ({
                   )}
 
                   <span className="block text-[10px] mt-2 opacity-60 text-right">
-                    {formatDistanceToNow(new Date(message.createdAt), {
-                      addSuffix: true,
-                    })}
+                    {hasMounted
+                      ? formatDistanceToNow(new Date(message.createdAt), {
+                          addSuffix: true,
+                        })
+                      : ""}
                   </span>
                 </div>
               </div>
