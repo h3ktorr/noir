@@ -2,6 +2,7 @@
 
 import { auth } from "@clerk/nextjs/server";
 import prisma from "@/lib/prisma";
+import { getIO } from "@/lib/socket-server";
 
 export async function markConversationAsRead(conversationId: string) {
   const { userId } = await auth();
@@ -32,6 +33,11 @@ export async function markConversationAsRead(conversationId: string) {
     data: {
       lastReadAt: new Date(),
     },
+  });
+
+  // Notify this user's connected devices that their unread count changed.
+  getIO()?.to(`user:${userId}`).emit("inbox:update", {
+    conversationId,
   });
 
   return { success: true };

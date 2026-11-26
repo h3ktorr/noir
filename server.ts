@@ -12,6 +12,7 @@ const handler = app.getRequestHandler();
 
 app.prepare().then(async () => {
   const { default: prisma } = await import("@/lib/prisma");
+
   const httpServer = createServer((req, res) => {
     handler(req, res);
   });
@@ -23,7 +24,7 @@ app.prepare().then(async () => {
     },
   });
 
-  // Authenticate every Socket.IO connection using a Clerk session token
+  // Authenticate every Socket.IO connection using a Clerk session token.
   io.use(async (socket, next) => {
     try {
       const token = socket.handshake.auth?.token;
@@ -49,7 +50,7 @@ app.prepare().then(async () => {
         return next(new Error("Invalid user identity"));
       }
 
-      // Store the verified Clerk user ID on the socket
+      // Store the verified Clerk user ID on the socket.
       socket.data.userId = verifiedToken.sub;
 
       next();
@@ -62,14 +63,28 @@ app.prepare().then(async () => {
   global.io = io;
 
   io.on("connection", (socket) => {
-    // This ID comes from the verified Clerk token
+    // This ID comes from the verified Clerk token.
     const userId = socket.data.userId;
 
-    // Automatically join the authenticated user's private room
+    // Track conversations where this socket is currently typing.
+    const typingConversations = new Set<string>();
+
+    // Automatically join the authenticated user's private room.
     socket.join(`user:${userId}`);
 
     console.log("Authenticated user connected:", userId);
     console.log(`Joined room: user:${userId}`);
+
+    const stopTyping = (conversationId: string) => {
+      if (!typingConversations.has(conversationId)) return;
+
+      typingConversations.delete(conversationId);
+
+      socket.to(`conversation:${conversationId}`).emit("typing:stop", {
+        conversationId,
+        userId,
+      });
+    };
 
     // Allow users to join only conversations they actively participate in.
     socket.on(
@@ -126,14 +141,58 @@ app.prepare().then(async () => {
       },
     );
 
+    // Notify other participants when this user starts typing.
+    socket.on("typing:start", (conversationId: unknown) => {
+      if (typeof conversationId !== "string" || !conversationId.trim()) {
+        return;
+      }
+
+      const room = `conversation:${conversationId}`;
+
+      // Only sockets already authorized to join this room can emit typing events.
+      if (!socket.rooms.has(room)) return;
+
+      if (typingConversations.has(conversationId)) return;
+
+      typingConversations.add(conversationId);
+
+      socket.to(room).emit("typing:start", {
+        conversationId,
+        userId,
+      });
+    });
+
+    // Notify other participants when this user stops typing.
+    socket.on("typing:stop", (conversationId: unknown) => {
+      if (typeof conversationId !== "string" || !conversationId.trim()) {
+        return;
+      }
+
+      stopTyping(conversationId);
+    });
+
     socket.on("conversation:leave", (conversationId: unknown) => {
       if (typeof conversationId !== "string" || !conversationId.trim()) {
         return;
       }
 
+      stopTyping(conversationId);
+
       socket.leave(`conversation:${conversationId}`);
 
       console.log(`User ${userId} left conversation:${conversationId}`);
+    });
+
+    // Clear typing status in every conversation if the socket disconnects.
+    socket.on("disconnecting", () => {
+      typingConversations.forEach((conversationId) => {
+        socket.to(`conversation:${conversationId}`).emit("typing:stop", {
+          conversationId,
+          userId,
+        });
+      });
+
+      typingConversations.clear();
     });
 
     socket.on("disconnect", () => {

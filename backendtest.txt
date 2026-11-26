@@ -101,3 +101,38 @@ We'll be finished when:
 4. The critical authorization tests pass.
 5. Existing features still work: authentication, posts, comments, likes, follows, reposts, notifications, blocking, reporting, uploads and profile editing.
 Our working rule: One file or closely related group of operations at a time. Inspect, identify issues, agree on the fix, implement, run TypeScript checks, and test. Then mark that item complete.
+
+
+
+
+
+
+
+5. Recommended implementation roadmap for remaining messages features.
+I'd suggest we continue in this order:
+1. Image sharing
+   
+   Implement ImageKit uploads, image previews, and image messages. Our database already supports IMAGE and mediaUrl.
+   Schema ready
+2. Typing indicators
+   
+   Use Socket.IO to broadcast typing and stop-typing events within conversation rooms.
+3. Online status and last seen
+   
+   Track connection and disconnection events and expose participant presence.
+4. Individual read receipts
+   
+   Extend the existing read-state implementation to show when individual messages have been seen.
+5. Message replies
+   
+   Use the existing replyToId relationship to implement reply previews and reply interactions.
+6. Message deletion
+   
+   Implement deletion using the existing deletedAt field, including real-time updates.
+7. Conversation creation and search
+add emogis
+   
+   Build the interface for starting new conversations and searching the inbox.
+8. Group messaging
+   
+   Build the group interface on top of the existing conversation and participant architecture.

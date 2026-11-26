@@ -4,7 +4,14 @@ import { auth } from "@clerk/nextjs/server";
 import prisma from "@/lib/prisma";
 import { getIO } from "@/lib/socket-server";
 
-export async function sendMessage(conversationId: string, content: string) {
+type MediaType = "IMAGE" | "VIDEO";
+
+export async function sendMessage(
+  conversationId: string,
+  content: string,
+  mediaUrl?: string,
+  mediaType?: MediaType,
+) {
   const { userId } = await auth();
 
   if (!userId) {
@@ -12,9 +19,55 @@ export async function sendMessage(conversationId: string, content: string) {
   }
 
   const trimmedContent = content.trim();
+  const trimmedMediaUrl = mediaUrl?.trim() || "";
 
-  if (!conversationId || !trimmedContent) {
+  if (!conversationId || (!trimmedContent && !trimmedMediaUrl)) {
     return { success: false, error: "Message cannot be empty" };
+  }
+
+  if (trimmedMediaUrl) {
+    try {
+      const mediaUrlObject = new URL(trimmedMediaUrl);
+      const imageKitUrl = new URL(
+        process.env.NEXT_PUBLIC_URL_ENDPOINT as string,
+      );
+
+      const isValidImageExtension = /\.(jpg|jpeg|png|webp|gif|avif)$/i.test(
+        mediaUrlObject.pathname,
+      );
+
+      const isValidVideoExtension = /\.(mp4|webm|mov)$/i.test(
+        mediaUrlObject.pathname,
+      );
+
+      const isValidMediaType =
+        (mediaType === "IMAGE" && isValidImageExtension) ||
+        (mediaType === "VIDEO" && isValidVideoExtension);
+
+      if (
+        mediaUrlObject.protocol !== "https:" ||
+        mediaUrlObject.origin !== imageKitUrl.origin ||
+        trimmedMediaUrl.length > 1000 ||
+        !isValidMediaType
+      ) {
+        return {
+          success: false,
+          error: "Invalid media URL or media type",
+        };
+      }
+    } catch {
+      return {
+        success: false,
+        error: "Invalid media URL",
+      };
+    }
+  }
+
+  if (trimmedMediaUrl && !mediaType) {
+    return {
+      success: false,
+      error: "Media type is required",
+    };
   }
 
   const conversation = await prisma.conversation.findFirst({
@@ -65,8 +118,9 @@ export async function sendMessage(conversationId: string, content: string) {
 
   const message = await prisma.message.create({
     data: {
-      content: trimmedContent,
-      type: "TEXT",
+      content: trimmedContent || null,
+      type: trimmedMediaUrl ? mediaType! : "TEXT",
+      mediaUrl: trimmedMediaUrl || null,
       conversationId,
       senderId: userId,
     },

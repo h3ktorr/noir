@@ -11,15 +11,18 @@ export default function BoardLayout({
   modal?: React.ReactNode;
 }>) {
   return (
-    <div> 
+    <div className="min-h-dvh">
       <Sidebar />
       <Navbar />
-      <main className="pt-14 w-screen md:w-[calc(100vw-6rem)] flex flex-col h-dvh overflow-x-hidden pb-16 md:ml-24 md:pb-0">
-        <div className="flex-1 min-h-0 flex flex-col">
+
+      <main className="pt-14 w-screen md:w-[calc(100vw-6rem)] flex flex-col h-dvh overflow-x-hidden pb-32 md:ml-24 md:pb-11">
+        <div className="flex-1 flex flex-col min-h-0">
           {children}
         </div>
+
         <Footer />
       </main>
+
       <CreatePost />
     </div>
   );

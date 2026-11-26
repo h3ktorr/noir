@@ -18,7 +18,7 @@ const Page = async ({
     : null;
 
   return (
-    <div className="flex w-full flex-1 min-h-0 overflow-hidden">
+    <div className="flex w-full flex-1 min-h-0 overflow-hidden h-[calc(100dvh-11.5rem)] md:h-[calc(100dvh-7.5rem)]">
       <AllMessages conversations={conversations} />
       <SingleMessage conversation={selectedConversation} />
     </div>
