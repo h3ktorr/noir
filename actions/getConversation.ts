@@ -50,6 +50,18 @@ export async function getConversation(conversationId: string) {
               img: true,
             },
           },
+          replyTo: {
+            include: {
+              sender: {
+                select: {
+                  id: true,
+                  username: true,
+                  displayName: true,
+                  img: true,
+                },
+              },
+            },
+          },
         },
       },
     },
@@ -66,9 +78,10 @@ export async function getConversation(conversationId: string) {
     img: conversation.img,
     currentUserId: userId,
 
-    participants: conversation.participants.map(
-      (participant) => participant.user,
-    ),
+    participants: conversation.participants.map((participant) => ({
+      ...participant.user,
+      lastReadAt: participant.lastReadAt,
+    })),
 
     messages: conversation.messages.reverse(),
   };

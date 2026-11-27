@@ -11,6 +11,7 @@ export async function sendMessage(
   content: string,
   mediaUrl?: string,
   mediaType?: MediaType,
+  replyToId?: string,
 ) {
   const { userId } = await auth();
 
@@ -20,6 +21,7 @@ export async function sendMessage(
 
   const trimmedContent = content.trim();
   const trimmedMediaUrl = mediaUrl?.trim() || "";
+  const trimmedReplyToId = replyToId?.trim() || "";
 
   if (!conversationId || (!trimmedContent && !trimmedMediaUrl)) {
     return { success: false, error: "Message cannot be empty" };
@@ -93,6 +95,27 @@ export async function sendMessage(
     return { success: false, error: "Conversation not found" };
   }
 
+  // Verify that the original message belongs to this conversation.
+  if (trimmedReplyToId) {
+    const originalMessage = await prisma.message.findFirst({
+      where: {
+        id: trimmedReplyToId,
+        conversationId,
+        deletedAt: null,
+      },
+      select: {
+        id: true,
+      },
+    });
+
+    if (!originalMessage) {
+      return {
+        success: false,
+        error: "Original message not found",
+      };
+    }
+  }
+
   const otherParticipantIds = conversation.participants
     .map((participant) => participant.userId)
     .filter((participantId) => participantId !== userId);
@@ -123,6 +146,7 @@ export async function sendMessage(
       mediaUrl: trimmedMediaUrl || null,
       conversationId,
       senderId: userId,
+      replyToId: trimmedReplyToId || null,
     },
     include: {
       sender: {
@@ -131,6 +155,18 @@ export async function sendMessage(
           username: true,
           displayName: true,
           img: true,
+        },
+      },
+      replyTo: {
+        include: {
+          sender: {
+            select: {
+              id: true,
+              username: true,
+              displayName: true,
+              img: true,
+            },
+          },
         },
       },
     },

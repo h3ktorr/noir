@@ -24,6 +24,64 @@ app.prepare().then(async () => {
     },
   });
 
+  // Track every active socket connection for each user.
+  const onlineUsers = new Map<string, Set<string>>();
+
+  // Find users who share active conversations with a user.
+  const getConversationPeerIds = async (userId: string) => {
+    const participations = await prisma.conversationParticipant.findMany({
+      where: {
+        userId,
+        archivedAt: null,
+      },
+      select: {
+        conversation: {
+          select: {
+            participants: {
+              where: {
+                archivedAt: null,
+              },
+              select: {
+                userId: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    return [
+      ...new Set(
+        participations.flatMap((participation) =>
+          participation.conversation.participants
+            .map((participant) => participant.userId)
+            .filter((peerId) => peerId !== userId),
+        ),
+      ),
+    ];
+  };
+
+  // Notify conversation peers about a user's presence.
+  const broadcastPresence = async (
+    userId: string,
+    isOnline: boolean,
+    lastSeenAt: Date | null = null,
+  ) => {
+    try {
+      const peerIds = await getConversationPeerIds(userId);
+
+      peerIds.forEach((peerId) => {
+        io.to(`user:${peerId}`).emit("presence:update", {
+          userId,
+          isOnline,
+          lastSeenAt: lastSeenAt?.toISOString() ?? null,
+        });
+      });
+    } catch (error) {
+      console.error("Presence broadcast failed:", error);
+    }
+  };
+
   // Authenticate every Socket.IO connection using a Clerk session token.
   io.use(async (socket, next) => {
     try {
@@ -50,7 +108,6 @@ app.prepare().then(async () => {
         return next(new Error("Invalid user identity"));
       }
 
-      // Store the verified Clerk user ID on the socket.
       socket.data.userId = verifiedToken.sub;
 
       next();
@@ -63,17 +120,27 @@ app.prepare().then(async () => {
   global.io = io;
 
   io.on("connection", (socket) => {
-    // This ID comes from the verified Clerk token.
     const userId = socket.data.userId;
 
-    // Track conversations where this socket is currently typing.
     const typingConversations = new Set<string>();
+
+    // Register this connection.
+    const userSockets = onlineUsers.get(userId) ?? new Set<string>();
+    const wasOffline = userSockets.size === 0;
+
+    userSockets.add(socket.id);
+    onlineUsers.set(userId, userSockets);
 
     // Automatically join the authenticated user's private room.
     socket.join(`user:${userId}`);
 
     console.log("Authenticated user connected:", userId);
     console.log(`Joined room: user:${userId}`);
+
+    // Notify conversation peers only when the user transitions online.
+    if (wasOffline) {
+      void broadcastPresence(userId, true);
+    }
 
     const stopTyping = (conversationId: string) => {
       if (!typingConversations.has(conversationId)) return;
@@ -127,6 +194,32 @@ app.prepare().then(async () => {
 
           await socket.join(`conversation:${conversationId}`);
 
+          // Send the current presence of conversation participants
+          // to this socket when it joins.
+          const participants = await prisma.conversationParticipant.findMany({
+            where: {
+              conversationId,
+              archivedAt: null,
+            },
+            select: {
+              userId: true,
+              user: {
+                select: {
+                  lastSeenAt: true,
+                },
+              },
+            },
+          });
+
+          socket.emit("presence:initial", {
+            conversationId,
+            users: participants.map((participant) => ({
+              userId: participant.userId,
+              isOnline: onlineUsers.has(participant.userId),
+              lastSeenAt: participant.user.lastSeenAt,
+            })),
+          });
+
           console.log(`User ${userId} joined conversation:${conversationId}`);
 
           respond({ success: true });
@@ -149,7 +242,6 @@ app.prepare().then(async () => {
 
       const room = `conversation:${conversationId}`;
 
-      // Only sockets already authorized to join this room can emit typing events.
       if (!socket.rooms.has(room)) return;
 
       if (typingConversations.has(conversationId)) return;
@@ -195,8 +287,37 @@ app.prepare().then(async () => {
       typingConversations.clear();
     });
 
-    socket.on("disconnect", () => {
+    socket.on("disconnect", async () => {
       console.log("User disconnected:", userId);
+
+      const activeSockets = onlineUsers.get(userId);
+
+      if (!activeSockets) return;
+
+      activeSockets.delete(socket.id);
+
+      // Other tabs or devices are still connected.
+      if (activeSockets.size > 0) return;
+
+      onlineUsers.delete(userId);
+
+      try {
+        const lastSeenAt = new Date();
+
+        await prisma.user.update({
+          where: {
+            id: userId,
+          },
+          data: {
+            lastSeenAt,
+          },
+        });
+
+        // Broadcast the exact timestamp saved in the database.
+        await broadcastPresence(userId, false, lastSeenAt);
+      } catch (error) {
+        console.error("Unable to update last seen:", error);
+      }
     });
   });
 

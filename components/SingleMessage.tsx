@@ -8,6 +8,8 @@ import {
   Send,
   ImagePlus,
   X,
+  Trash2,
+  Reply,
 } from "lucide-react";
 import {
   ImageKitAbortError,
@@ -24,16 +26,41 @@ import { useEffect, useRef, useState } from "react";
 import { socket } from "@/socket";
 import { markConversationAsRead } from "@/actions/markConversationAsRead";
 import { useRouter } from "next/navigation";
+import { deleteMessage } from "@/actions/deleteMessage";
 
 type Conversation = NonNullable<
   Awaited<ReturnType<typeof getConversation>>
 >;
 
+type Message = Conversation["messages"][number];
 type MediaType = "IMAGE" | "VIDEO";
 
 type TypingPayload = {
   conversationId: string;
   userId: string;
+};
+
+type PresenceUser = {
+  userId: string;
+  isOnline: boolean;
+  lastSeenAt: string | Date | null;
+};
+
+type PresenceInitialPayload = {
+  conversationId: string;
+  users: PresenceUser[];
+};
+
+type PresenceUpdatePayload = {
+  userId: string;
+  isOnline: boolean;
+  lastSeenAt: string | null;
+};
+
+type ReadPayload = {
+  conversationId: string;
+  userId: string;
+  lastReadAt: string;
 };
 
 const MAX_IMAGE_SIZE = 10 * 1024 * 1024;
@@ -59,10 +86,32 @@ const SingleMessage = ({
   const [mediaPreview, setMediaPreview] = useState<string | null>(null);
   const [isUploadingMedia, setIsUploadingMedia] = useState(false);
 
+  const [replyingTo, setReplyingTo] = useState<Message | null>(null);
+
   const [typingUserIds, setTypingUserIds] = useState<string[]>([]);
+
+  const [presence, setPresence] = useState<
+    Record<string, PresenceUser>
+  >({});
+
+  const [readReceipts, setReadReceipts] = useState<
+    Record<string, string | null>
+  >(() =>
+    Object.fromEntries(
+      (conversation?.participants ?? []).map((participant) => [
+        participant.id,
+        participant.lastReadAt?.toISOString() ?? null,
+      ]),
+    ),
+  );
+
+  const [deletingMessageId, setDeletingMessageId] = useState<string | null>(
+    null,
+  );
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const mediaInputRef = useRef<HTMLInputElement>(null);
+  const messageInputRef = useRef<HTMLInputElement>(null);
 
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
     null,
@@ -70,9 +119,20 @@ const SingleMessage = ({
 
   const isTypingRef = useRef(false);
 
-  // Synchronize messages when the selected conversation changes.
+  // Synchronize messages and read receipts when the selected conversation changes.
   useEffect(() => {
     setMessages(conversation?.messages ?? []);
+    setReplyingTo(null);
+    setContent("");
+
+    setReadReceipts(
+      Object.fromEntries(
+        (conversation?.participants ?? []).map((participant) => [
+          participant.id,
+          participant.lastReadAt?.toISOString() ?? null,
+        ]),
+      ),
+    );
   }, [conversation]);
 
   // Conversation socket events.
@@ -114,8 +174,85 @@ const SingleMessage = ({
       );
     };
 
+    const handlePresenceInitial = (
+      payload: PresenceInitialPayload,
+    ) => {
+      if (payload.conversationId !== conversationId) return;
+
+      const users: Record<string, PresenceUser> = {};
+
+      payload.users.forEach((user) => {
+        users[user.userId] = user;
+      });
+
+      setPresence(users);
+    };
+
+    const handlePresenceUpdate = (
+      payload: PresenceUpdatePayload,
+    ) => {
+      setPresence((previous) => ({
+        ...previous,
+        [payload.userId]: {
+          userId: payload.userId,
+          isOnline: payload.isOnline,
+          lastSeenAt: payload.isOnline
+            ? previous[payload.userId]?.lastSeenAt ?? null
+            : payload.lastSeenAt,
+        },
+      }));
+    };
+
+    const handleMessagesRead = (payload: ReadPayload) => {
+      if (payload.conversationId !== conversationId) return;
+      if (payload.userId === conversation.currentUserId) return;
+
+      setReadReceipts((previous) => ({
+        ...previous,
+        [payload.userId]: payload.lastReadAt,
+      }));
+    };
+
+    const handleMessageDeleted = (payload: {
+      conversationId: string;
+      messageId: string;
+      deletedAt: string;
+    }) => {
+      if (payload.conversationId !== conversationId) return;
+
+      const deletedAt = new Date(payload.deletedAt);
+
+      setMessages((previousMessages) =>
+        previousMessages.map((message) => ({
+          ...message,
+          ...(message.id === payload.messageId
+            ? {
+                content: "This message was deleted",
+                mediaUrl: null,
+                deletedAt,
+              }
+            : {}),
+          ...(message.replyTo?.id === payload.messageId
+            ? {
+                replyTo: {
+                  ...message.replyTo,
+                  content: "This message was deleted",
+                  mediaUrl: null,
+                  deletedAt,
+                },
+              }
+            : {}),
+        })),
+      );
+
+      setReplyingTo((previous) =>
+        previous?.id === payload.messageId ? null : previous,
+      );
+    };
+
     const joinConversation = () => {
       setTypingUserIds([]);
+      setPresence({});
 
       socket.emit(
         "conversation:join",
@@ -132,7 +269,10 @@ const SingleMessage = ({
     socket.on("typing:start", handleTypingStart);
     socket.on("typing:stop", handleTypingStop);
     socket.on("connect", joinConversation);
-
+    socket.on("presence:initial", handlePresenceInitial);
+    socket.on("presence:update", handlePresenceUpdate);
+    socket.on("messages:read", handleMessagesRead);
+    socket.on("message:deleted", handleMessageDeleted);
     if (socket.connected) {
       joinConversation();
     }
@@ -142,6 +282,10 @@ const SingleMessage = ({
       socket.off("typing:start", handleTypingStart);
       socket.off("typing:stop", handleTypingStop);
       socket.off("connect", joinConversation);
+      socket.off("presence:initial", handlePresenceInitial);
+      socket.off("presence:update", handlePresenceUpdate);
+      socket.off("messages:read", handleMessagesRead);
+      socket.off("message:deleted", handleMessageDeleted);
 
       if (typingTimeoutRef.current) {
         clearTimeout(typingTimeoutRef.current);
@@ -170,7 +314,9 @@ const SingleMessage = ({
     setHasMounted(true);
   }, []);
 
-  // Mark the selected conversation as read.
+  // Mark the conversation as read when it opens or a new message arrives.
+  const latestMessageId = messages[messages.length - 1]?.id;
+
   useEffect(() => {
     const conversationId = conversation?.id;
 
@@ -195,7 +341,7 @@ const SingleMessage = ({
     return () => {
       cancelled = true;
     };
-  }, [conversation?.id, router]);
+  }, [conversation?.id, latestMessageId, router]);
 
   // Clean up media preview URLs.
   useEffect(() => {
@@ -269,6 +415,127 @@ const SingleMessage = ({
     conversation.img ||
     otherParticipant?.img ||
     "general/noAvatar.png";
+
+  const otherParticipantReadAt = otherParticipant
+    ? readReceipts[otherParticipant.id]
+    : null;
+
+  // Identify the latest outgoing message covered by the recipient's read timestamp.
+  const lastSeenMessageId =
+    !conversation.isGroup && otherParticipantReadAt
+      ? [...messages]
+          .reverse()
+          .find(
+            (message) =>
+              message.senderId === conversation.currentUserId &&
+              new Date(message.createdAt).getTime() <=
+                new Date(otherParticipantReadAt).getTime(),
+          )?.id
+      : undefined;
+
+  const handleDeleteMessage = async (messageId: string) => {
+  if (deletingMessageId) return;
+
+  const confirmed = window.confirm(
+    "Are you sure you want to delete this message for everyone?",
+  );
+
+  if (!confirmed) return;
+
+  setDeletingMessageId(messageId);
+
+  try {
+    const result = await deleteMessage(messageId);
+
+    if (!result.success) {
+      alert(result.error || "Failed to delete message.");
+      return;
+    }
+
+    // Update immediately for the sender.
+    if (!result.deletedAt) {
+      alert("Message was deleted, but the timestamp was not returned.");
+      return;
+    }
+
+    const deletedAt = new Date(result.deletedAt);
+
+    setMessages((previousMessages) =>
+      previousMessages.map((message) => ({
+        ...message,
+        ...(message.id === messageId
+          ? {
+              content: "This message was deleted",
+              mediaUrl: null,
+              deletedAt,
+            }
+          : {}),
+        ...(message.replyTo?.id === messageId
+          ? {
+              replyTo: {
+                ...message.replyTo,
+                content: "This message was deleted",
+                mediaUrl: null,
+                deletedAt,
+              },
+            }
+          : {}),
+      })),
+    );
+
+    setReplyingTo((previous) =>
+      previous?.id === messageId ? null : previous,
+    );
+  } catch (error) {
+    console.error("Failed to delete message:", error);
+    alert("Something went wrong while deleting the message.");
+  } finally {
+    setDeletingMessageId(null);
+  }
+};
+
+  // Start replying to a message.
+  const handleReply = (message: Message) => {
+    setReplyingTo(message);
+    messageInputRef.current?.focus();
+  };
+
+  // Cancel the current reply.
+  const handleCancelReply = () => {
+    setReplyingTo(null);
+  };
+
+  // Jump to the original message from a quoted preview.
+  const handleJumpToMessage = (messageId: string) => {
+    const originalElement = document.getElementById(
+      `message-${messageId}`,
+    );
+
+    if (!originalElement) return;
+
+    originalElement.scrollIntoView({
+      behavior: "smooth",
+      block: "center",
+    });
+
+    originalElement.classList.add("ring-2", "ring-foreground/50");
+
+    setTimeout(() => {
+      originalElement.classList.remove(
+        "ring-2",
+        "ring-foreground/50",
+      );
+    }, 1500);
+  };
+
+  const getMessagePreview = (
+    message: Pick<Message, "content" | "type">,
+  ) => {
+    if (message.content) return message.content;
+    if (message.type === "IMAGE") return "Photo";
+    if (message.type === "VIDEO") return "Video";
+    return "Message";
+  };
 
   const handleMediaChange = (
     event: React.ChangeEvent<HTMLInputElement>,
@@ -345,6 +612,7 @@ const SingleMessage = ({
     stopTyping();
 
     const messageContent = content.trim();
+    const replyToId = replyingTo?.id;
 
     setIsSending(true);
 
@@ -401,6 +669,7 @@ const SingleMessage = ({
         messageContent,
         mediaUrl,
         mediaType,
+        replyToId,
       );
 
       if (!("message" in result) || !result.message) {
@@ -418,7 +687,11 @@ const SingleMessage = ({
       const sentMessage = result.message;
 
       setMessages((previousMessages) => {
-        if (previousMessages.some((message) => message.id === sentMessage.id)) {
+        if (
+          previousMessages.some(
+            (message) => message.id === sentMessage.id,
+          )
+        ) {
           return previousMessages;
         }
 
@@ -426,6 +699,7 @@ const SingleMessage = ({
       });
 
       setContent("");
+      setReplyingTo(null);
       handleRemoveMedia();
     } catch (error) {
       if (error instanceof ImageKitAbortError) {
@@ -467,6 +741,41 @@ const SingleMessage = ({
           <div className="min-w-0">
             <p className="font-medium truncate">{name}</p>
 
+            {!conversation.isGroup && otherParticipant && (
+              <p className="text-xs text-foreground/60">
+                {presence[otherParticipant.id]?.isOnline ? (
+                  <span className="text-green-500">Online</span>
+                ) : presence[otherParticipant.id]?.lastSeenAt ? (
+                  <>
+                    Last seen{" "}
+                    {hasMounted
+                      ? formatDistanceToNow(
+                          new Date(
+                            presence[otherParticipant.id].lastSeenAt!,
+                          ),
+                          { addSuffix: true },
+                        )
+                      : "recently"}
+                  </>
+                ) : (
+                  "Offline"
+                )}
+              </p>
+            )}
+
+            {conversation.isGroup && (
+              <p className="text-xs text-foreground/60">
+                {
+                  Object.values(presence).filter(
+                    (user) =>
+                      user.isOnline &&
+                      user.userId !== conversation.currentUserId,
+                  ).length
+                }{" "}
+                online
+              </p>
+            )}
+
             {typingUserIds.length > 0 && (
               <p className="text-xs text-foreground/60 animate-pulse">
                 {conversation.isGroup
@@ -499,10 +808,18 @@ const SingleMessage = ({
             const isOutgoing =
               message.senderId === conversation.currentUserId;
 
+            const isSeen = message.id === lastSeenMessageId;
+
+            const replySenderName =
+              message.replyTo?.sender.displayName ||
+              message.replyTo?.sender.username ||
+              "Unknown user";
+
             return (
               <div
                 key={message.id}
-                className={`flex ${
+                id={`message-${message.id}`}
+                className={`flex transition-shadow duration-300 rounded-2xl ${
                   isOutgoing ? "justify-end" : "justify-start"
                 }`}
               >
@@ -513,45 +830,111 @@ const SingleMessage = ({
                       : "bg-foreground/10 rounded-tl-none"
                   }`}
                 >
-                  {message.mediaUrl && message.type === "IMAGE" && (
-                    <a
-                      href={message.mediaUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
+                  {/* Quoted original message */}
+                  {message.replyTo && (
+                    <button
+                      type="button"
+                      onClick={() =>
+                        handleJumpToMessage(message.replyTo!.id)
+                      }
+                      className={`w-full text-left mb-3 p-2 rounded-lg border-l-4 ${
+                        isOutgoing
+                          ? "bg-background/15 border-background/60"
+                          : "bg-foreground/10 border-foreground/50"
+                      }`}
+                      title="Jump to original message"
                     >
-                      <img
-                        src={message.mediaUrl}
-                        alt="Shared image"
-                        className="max-w-full max-h-72 rounded-lg object-contain mb-2"
-                      />
-                    </a>
+                      <span className="block text-xs font-semibold mb-1">
+                        {replySenderName}
+                      </span>
+
+                      <span className="block text-xs opacity-80 line-clamp-2 break-words">
+                        {getMessagePreview(message.replyTo)}
+                      </span>
+                    </button>
                   )}
 
-                  {message.mediaUrl && message.type === "VIDEO" && (
-                    <video
-                      src={message.mediaUrl}
-                      controls
-                      playsInline
-                      preload="metadata"
-                      className="max-w-full max-h-72 rounded-lg mb-2"
-                    >
-                      Your browser does not support video playback.
-                    </video>
+                  {message.deletedAt ? (
+                    <p className="text-sm italic opacity-60">
+                      This message was deleted
+                    </p>
+                  ) : (
+                    <>
+                      {message.mediaUrl && message.type === "IMAGE" && (
+                        <a
+                          href={message.mediaUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          <img
+                            src={message.mediaUrl}
+                            alt="Shared image"
+                            className="max-w-full max-h-72 rounded-lg object-contain mb-2"
+                          />
+                        </a>
+                      )}
+
+                      {message.mediaUrl && message.type === "VIDEO" && (
+                        <video
+                          src={message.mediaUrl}
+                          controls
+                          playsInline
+                          preload="metadata"
+                          className="max-w-full max-h-72 rounded-lg mb-2"
+                        >
+                          Your browser does not support video playback.
+                        </video>
+                      )}
+
+                      {message.content && (
+                        <p className="whitespace-pre-wrap wrap-break-word">
+                          {message.content}
+                        </p>
+                      )}
+                    </>
                   )}
 
-                  {message.content && (
-                    <p className="whitespace-pre-wrap wrap-break-word">
-                      {message.content}
+                  <div className="flex items-center justify-between gap-4 mt-2">
+                    <div className="flex items-center gap-3">
+                      <button
+                        type="button"
+                        onClick={() => handleReply(message)}
+                        disabled={isSending || !!message.deletedAt}
+                        className="flex items-center gap-1 text-[10px] opacity-60 hover:opacity-100 transition-opacity disabled:opacity-30"
+                        title="Reply to message"
+                      >
+                        <Reply size={13} />
+                        Reply
+                      </button>
+
+                      {isOutgoing && !message.deletedAt && (
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteMessage(message.id)}
+                          disabled={deletingMessageId !== null}
+                          className="flex items-center gap-1 text-[10px] text-red-500 opacity-70 hover:opacity-100 transition-opacity disabled:opacity-30"
+                          title="Delete message for everyone"
+                        >
+                          <Trash2 size={13} />
+                          {deletingMessageId === message.id ? "Deleting..." : "Delete"}
+                        </button>
+                      )}
+                    </div>
+
+                    <span className="text-[10px] opacity-60 text-right">
+                      {hasMounted
+                        ? formatDistanceToNow(new Date(message.createdAt), {
+                            addSuffix: true,
+                          })
+                        : ""}
+                    </span>
+                  </div>
+
+                  {isSeen && (
+                    <p className="text-[10px] mt-1 text-right opacity-70">
+                      Seen
                     </p>
                   )}
-
-                  <span className="block text-[10px] mt-2 opacity-60 text-right">
-                    {hasMounted
-                      ? formatDistanceToNow(new Date(message.createdAt), {
-                          addSuffix: true,
-                        })
-                      : ""}
-                  </span>
                 </div>
               </div>
             );
@@ -560,6 +943,35 @@ const SingleMessage = ({
 
         <div ref={messagesEndRef} />
       </div>
+
+      {/* Reply Preview */}
+      {replyingTo && (
+        <div className="px-4 pt-3 border-t border-foreground/20">
+          <div className="flex items-center justify-between gap-3 p-3 rounded-lg bg-foreground/5">
+            <div className="min-w-0 border-l-4 border-foreground/50 pl-3">
+              <p className="text-xs font-semibold mb-1">
+                Replying to{" "}
+                {replyingTo.sender.displayName ||
+                  replyingTo.sender.username}
+              </p>
+
+              <p className="text-xs text-foreground/60 truncate">
+                {getMessagePreview(replyingTo)}
+              </p>
+            </div>
+
+            <button
+              type="button"
+              onClick={handleCancelReply}
+              disabled={isSending}
+              className="shrink-0 p-1 rounded-full hover:bg-foreground/10 disabled:opacity-50"
+              title="Cancel reply"
+            >
+              <X size={16} />
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Media Preview */}
       {selectedMedia && mediaPreview && (
@@ -621,10 +1033,13 @@ const SingleMessage = ({
         </button>
 
         <input
+          ref={messageInputRef}
           type="text"
           value={content}
           onChange={(event) => handleContentChange(event.target.value)}
-          placeholder="Type a message..."
+          placeholder={
+            replyingTo ? "Write a reply..." : "Type a message..."
+          }
           disabled={isSending}
           className="w-full p-2 border border-foreground rounded-full bg-background text-foreground focus:outline-none disabled:opacity-50"
         />

@@ -26,17 +26,29 @@ export async function markConversationAsRead(conversationId: string) {
     return { success: false };
   }
 
+  const lastReadAt = new Date();
+
   await prisma.conversationParticipant.update({
     where: {
       id: participant.id,
     },
     data: {
-      lastReadAt: new Date(),
+      lastReadAt,
     },
   });
 
+  const io = getIO();
+
+  // Notify everyone in this conversation that this user
+  // has read the messages up to this timestamp.
+  io?.to(`conversation:${conversationId}`).emit("messages:read", {
+    conversationId,
+    userId,
+    lastReadAt: lastReadAt.toISOString(),
+  });
+
   // Notify this user's connected devices that their unread count changed.
-  getIO()?.to(`user:${userId}`).emit("inbox:update", {
+  io?.to(`user:${userId}`).emit("inbox:update", {
     conversationId,
   });
 
