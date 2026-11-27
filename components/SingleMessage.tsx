@@ -10,6 +10,7 @@ import {
   X,
   Trash2,
   Reply,
+  Pencil,
 } from "lucide-react";
 import {
   ImageKitAbortError,
@@ -27,6 +28,7 @@ import { socket } from "@/socket";
 import { markConversationAsRead } from "@/actions/markConversationAsRead";
 import { useRouter } from "next/navigation";
 import { deleteMessage } from "@/actions/deleteMessage";
+import { editMessage } from "@/actions/editMessage";
 
 type Conversation = NonNullable<
   Awaited<ReturnType<typeof getConversation>>
@@ -109,6 +111,14 @@ const SingleMessage = ({
     null,
   );
 
+  const [editingMessageId, setEditingMessageId] = useState<string | null>(
+    null,
+  );
+
+  const [editContent, setEditContent] = useState("");
+
+  const [isSavingEdit, setIsSavingEdit] = useState(false);
+
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const mediaInputRef = useRef<HTMLInputElement>(null);
   const messageInputRef = useRef<HTMLInputElement>(null);
@@ -124,6 +134,8 @@ const SingleMessage = ({
     setMessages(conversation?.messages ?? []);
     setReplyingTo(null);
     setContent("");
+    setEditingMessageId(null);
+    setEditContent("");
 
     setReadReceipts(
       Object.fromEntries(
@@ -250,6 +262,48 @@ const SingleMessage = ({
       );
     };
 
+    const handleMessageEdited = (payload: {
+      conversationId: string;
+      messageId: string;
+      content: string;
+      editedAt: string;
+    }) => {
+      if (payload.conversationId !== conversationId) return;
+
+      const editedAt = new Date(payload.editedAt);
+
+      setMessages((previousMessages) =>
+        previousMessages.map((message) => ({
+          ...message,
+          ...(message.id === payload.messageId
+            ? {
+                content: payload.content,
+                editedAt,
+              }
+            : {}),
+          ...(message.replyTo?.id === payload.messageId
+            ? {
+                replyTo: {
+                  ...message.replyTo,
+                  content: payload.content,
+                  editedAt,
+                },
+              }
+            : {}),
+        })),
+      );
+
+      setReplyingTo((previous) =>
+        previous?.id === payload.messageId
+          ? {
+              ...previous,
+              content: payload.content,
+              editedAt,
+            }
+          : previous,
+      );
+    };
+
     const joinConversation = () => {
       setTypingUserIds([]);
       setPresence({});
@@ -273,6 +327,7 @@ const SingleMessage = ({
     socket.on("presence:update", handlePresenceUpdate);
     socket.on("messages:read", handleMessagesRead);
     socket.on("message:deleted", handleMessageDeleted);
+    socket.on("message:edited", handleMessageEdited);
     if (socket.connected) {
       joinConversation();
     }
@@ -286,6 +341,7 @@ const SingleMessage = ({
       socket.off("presence:update", handlePresenceUpdate);
       socket.off("messages:read", handleMessagesRead);
       socket.off("message:deleted", handleMessageDeleted);
+      socket.off("message:edited", handleMessageEdited);
 
       if (typingTimeoutRef.current) {
         clearTimeout(typingTimeoutRef.current);
@@ -434,65 +490,146 @@ const SingleMessage = ({
       : undefined;
 
   const handleDeleteMessage = async (messageId: string) => {
-  if (deletingMessageId) return;
+    if (deletingMessageId) return;
 
-  const confirmed = window.confirm(
-    "Are you sure you want to delete this message for everyone?",
-  );
+    const confirmed = window.confirm(
+      "Are you sure you want to delete this message for everyone?",
+    );
 
-  if (!confirmed) return;
+    if (!confirmed) return;
 
-  setDeletingMessageId(messageId);
+    setDeletingMessageId(messageId);
 
-  try {
-    const result = await deleteMessage(messageId);
+    try {
+      const result = await deleteMessage(messageId);
 
-    if (!result.success) {
-      alert(result.error || "Failed to delete message.");
-      return;
-    }
+      if (!result.success) {
+        alert(result.error || "Failed to delete message.");
+        return;
+      }
 
-    // Update immediately for the sender.
-    if (!result.deletedAt) {
-      alert("Message was deleted, but the timestamp was not returned.");
-      return;
-    }
+      // Update immediately for the sender.
+      if (!result.deletedAt) {
+        alert("Message was deleted, but the timestamp was not returned.");
+        return;
+      }
 
-    const deletedAt = new Date(result.deletedAt);
+      const deletedAt = new Date(result.deletedAt);
 
-    setMessages((previousMessages) =>
-      previousMessages.map((message) => ({
-        ...message,
-        ...(message.id === messageId
-          ? {
-              content: "This message was deleted",
-              mediaUrl: null,
-              deletedAt,
-            }
-          : {}),
-        ...(message.replyTo?.id === messageId
-          ? {
-              replyTo: {
-                ...message.replyTo,
+      setMessages((previousMessages) =>
+        previousMessages.map((message) => ({
+          ...message,
+          ...(message.id === messageId
+            ? {
                 content: "This message was deleted",
                 mediaUrl: null,
                 deletedAt,
-              },
-            }
-          : {}),
-      })),
-    );
+              }
+            : {}),
+          ...(message.replyTo?.id === messageId
+            ? {
+                replyTo: {
+                  ...message.replyTo,
+                  content: "This message was deleted",
+                  mediaUrl: null,
+                  deletedAt,
+                },
+              }
+            : {}),
+        })),
+      );
 
-    setReplyingTo((previous) =>
-      previous?.id === messageId ? null : previous,
-    );
-  } catch (error) {
-    console.error("Failed to delete message:", error);
-    alert("Something went wrong while deleting the message.");
-  } finally {
-    setDeletingMessageId(null);
-  }
-};
+      setReplyingTo((previous) =>
+        previous?.id === messageId ? null : previous,
+      );
+    } catch (error) {
+      console.error("Failed to delete message:", error);
+      alert("Something went wrong while deleting the message.");
+    } finally {
+      setDeletingMessageId(null);
+    }
+  };
+
+  const handleStartEdit = (message: Message) => {
+    if (
+      message.senderId !== conversation.currentUserId ||
+      message.type !== "TEXT" ||
+      message.deletedAt
+    ) {
+      return;
+    }
+
+    setEditingMessageId(message.id);
+    setEditContent(message.content ?? "");
+  };
+
+  const handleCancelEdit = () => {
+    setEditingMessageId(null);
+    setEditContent("");
+  };
+
+  const handleSaveEdit = async (messageId: string) => {
+    const trimmedContent = editContent.trim();
+
+    if (!trimmedContent || isSavingEdit) return;
+
+    setIsSavingEdit(true);
+
+    try {
+      const result = await editMessage(messageId, trimmedContent);
+
+      if (!result.success) {
+        alert(result.error || "Unable to edit message");
+        return;
+      }
+
+      if (!result.editedAt) {
+        alert("Message was edited, but its updated timestamp was not returned.");
+        return;
+      }
+
+      const editedAt = new Date(result.editedAt);
+
+      setMessages((previousMessages) =>
+        previousMessages.map((message) => ({
+          ...message,
+          ...(message.id === messageId
+            ? {
+                content: result.content,
+                editedAt,
+              }
+            : {}),
+          ...(message.replyTo?.id === messageId
+            ? {
+                replyTo: {
+                  ...message.replyTo,
+                  content: result.content,
+                  editedAt,
+                },
+              }
+            : {}),
+        })),
+      );
+
+      setReplyingTo((previous) =>
+        previous?.id === messageId
+          ? {
+              ...previous,
+              content: result.content,
+              editedAt,
+            }
+          : previous,
+      );
+
+      setEditingMessageId(null);
+      setEditContent("");
+    } catch (error) {
+      console.error("Failed to edit message:", error);
+      alert("Something went wrong while editing the message.");
+    } finally {
+      setIsSavingEdit(false);
+    }
+  };
 
   // Start replying to a message.
   const handleReply = (message: Message) => {
@@ -848,7 +985,7 @@ const SingleMessage = ({
                         {replySenderName}
                       </span>
 
-                      <span className="block text-xs opacity-80 line-clamp-2 break-words">
+                      <span className="block text-xs opacity-80 line-clamp-2 wrap-break-word">
                         {getMessagePreview(message.replyTo)}
                       </span>
                     </button>
@@ -858,6 +995,37 @@ const SingleMessage = ({
                     <p className="text-sm italic opacity-60">
                       This message was deleted
                     </p>
+                  ) : editingMessageId === message.id ? (
+                    <div className="flex flex-col gap-2 min-w-0">
+                      <textarea
+                        value={editContent}
+                        onChange={(event) => setEditContent(event.target.value)}
+                        rows={3}
+                        autoFocus
+                        disabled={isSavingEdit}
+                        className="w-full min-w-0 p-2 rounded-lg bg-background text-foreground border border-foreground/30 focus:outline-none focus:border-foreground resize-y text-sm"
+                      />
+
+                      <div className="flex items-center justify-end gap-2">
+                        <button
+                          type="button"
+                          onClick={handleCancelEdit}
+                          disabled={isSavingEdit}
+                          className="text-xs px-3 py-1 rounded-full border border-background/30 hover:bg-background/10 disabled:opacity-50"
+                        >
+                          Cancel
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => handleSaveEdit(message.id)}
+                          disabled={!editContent.trim() || isSavingEdit}
+                          className="text-xs px-3 py-1 rounded-full bg-background text-foreground hover:opacity-80 disabled:opacity-50"
+                        >
+                          {isSavingEdit ? "Saving..." : "Save"}
+                        </button>
+                      </div>
+                    </div>
                   ) : (
                     <>
                       {message.mediaUrl && message.type === "IMAGE" && (
@@ -907,11 +1075,28 @@ const SingleMessage = ({
                         Reply
                       </button>
 
+                      {isOutgoing &&
+                        message.type === "TEXT" &&
+                        !message.deletedAt && (
+                          <button
+                            type="button"
+                            onClick={() => handleStartEdit(message)}
+                            disabled={editingMessageId !== null || deletingMessageId !== null}
+                            className="flex items-center gap-1 text-[10px] opacity-60 hover:opacity-100 transition-opacity disabled:opacity-30"
+                            title="Edit message"
+                          >
+                            <Pencil size={13} />
+                            Edit
+                          </button>
+                        )}
+
                       {isOutgoing && !message.deletedAt && (
                         <button
                           type="button"
                           onClick={() => handleDeleteMessage(message.id)}
-                          disabled={deletingMessageId !== null}
+                          disabled={
+                            deletingMessageId !== null || editingMessageId !== null
+                          }
                           className="flex items-center gap-1 text-[10px] text-red-500 opacity-70 hover:opacity-100 transition-opacity disabled:opacity-30"
                           title="Delete message for everyone"
                         >
@@ -921,13 +1106,19 @@ const SingleMessage = ({
                       )}
                     </div>
 
-                    <span className="text-[10px] opacity-60 text-right">
-                      {hasMounted
-                        ? formatDistanceToNow(new Date(message.createdAt), {
-                            addSuffix: true,
-                          })
-                        : ""}
-                    </span>
+                    <div className="flex items-center gap-2 text-[10px] opacity-60">
+                      {message.editedAt && !message.deletedAt && (
+                        <span>Edited</span>
+                      )}
+
+                      <span className="text-right">
+                        {hasMounted
+                          ? formatDistanceToNow(new Date(message.createdAt), {
+                              addSuffix: true,
+                            })
+                          : ""}
+                      </span>
+                    </div>
                   </div>
 
                   {isSeen && (

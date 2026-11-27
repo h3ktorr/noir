@@ -280,6 +280,7 @@ model Message {
   type      MessageType @default(TEXT)
   mediaUrl  String?     @db.VarChar(1000)
   deletedAt DateTime?
+  editedAt  DateTime?
 
   conversationId String
   senderId       String
