@@ -76,10 +76,12 @@ export async function getConversation(conversationId: string) {
     isGroup: conversation.isGroup,
     name: conversation.name,
     img: conversation.img,
+    createdById: conversation.createdById,
     currentUserId: userId,
 
     participants: conversation.participants.map((participant) => ({
       ...participant.user,
+      role: participant.role,
       lastReadAt: participant.lastReadAt,
     })),
 

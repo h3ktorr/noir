@@ -29,6 +29,8 @@ import { markConversationAsRead } from "@/actions/markConversationAsRead";
 import { useRouter } from "next/navigation";
 import { deleteMessage } from "@/actions/deleteMessage";
 import { editMessage } from "@/actions/editMessage";
+import EmojiPicker from "./EmojiPicker";
+import { addGroupMembers } from "@/actions/addGroupMembers";
 
 type Conversation = NonNullable<
   Awaited<ReturnType<typeof getConversation>>
@@ -63,6 +65,13 @@ type ReadPayload = {
   conversationId: string;
   userId: string;
   lastReadAt: string;
+};
+
+type SearchUser = {
+  id: string;
+  username: string;
+  displayName: string | null;
+  img: string | null;
 };
 
 const MAX_IMAGE_SIZE = 10 * 1024 * 1024;
@@ -118,6 +127,20 @@ const SingleMessage = ({
   const [editContent, setEditContent] = useState("");
 
   const [isSavingEdit, setIsSavingEdit] = useState(false);
+  const [showGroupDetails, setShowGroupDetails] = useState(false);
+
+  const [memberSearch, setMemberSearch] = useState("");
+  const [searchResults, setSearchResults] = useState<SearchUser[]>([]);
+  const [selectedMembers, setSelectedMembers] = useState<SearchUser[]>([]);
+  const [isSearchingMembers, setIsSearchingMembers] = useState(false);
+  const [isAddingMembers, setIsAddingMembers] = useState(false);
+
+  const isCurrentUserAdmin =
+  conversation?.participants.some(
+    (participant) =>
+      participant.id === conversation.currentUserId &&
+      participant.role === "ADMIN",
+  ) ?? false;
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const mediaInputRef = useRef<HTMLInputElement>(null);
@@ -136,6 +159,7 @@ const SingleMessage = ({
     setContent("");
     setEditingMessageId(null);
     setEditContent("");
+    setShowGroupDetails(false);
 
     setReadReceipts(
       Object.fromEntries(
@@ -319,6 +343,18 @@ const SingleMessage = ({
       );
     };
 
+    const handleGroupMembersUpdated = (payload: {
+      conversationId: string;
+    }) => {
+      if (payload.conversationId !== conversationId) return;
+
+      // Refresh the conversation so the member list and count are updated.
+      router.refresh();
+
+      // Request a fresh presence snapshot, including newly added members.
+      joinConversation();
+    };
+
     socket.on("message:new", handleNewMessage);
     socket.on("typing:start", handleTypingStart);
     socket.on("typing:stop", handleTypingStop);
@@ -328,6 +364,7 @@ const SingleMessage = ({
     socket.on("messages:read", handleMessagesRead);
     socket.on("message:deleted", handleMessageDeleted);
     socket.on("message:edited", handleMessageEdited);
+    socket.on("group:members-updated", handleGroupMembersUpdated);
     if (socket.connected) {
       joinConversation();
     }
@@ -342,6 +379,7 @@ const SingleMessage = ({
       socket.off("messages:read", handleMessagesRead);
       socket.off("message:deleted", handleMessageDeleted);
       socket.off("message:edited", handleMessageEdited);
+      socket.off("group:members-updated", handleGroupMembersUpdated);
 
       if (typingTimeoutRef.current) {
         clearTimeout(typingTimeoutRef.current);
@@ -369,6 +407,79 @@ const SingleMessage = ({
   useEffect(() => {
     setHasMounted(true);
   }, []);
+
+  // Search for users to add to the group.
+  useEffect(() => {
+    const query = memberSearch.trim();
+
+    if (
+      !showGroupDetails ||
+      !conversation?.isGroup ||
+      !isCurrentUserAdmin ||
+      !query
+    ) {
+      setSearchResults([]);
+      setIsSearchingMembers(false);
+      return;
+    }
+
+    const controller = new AbortController();
+
+    const timeout = setTimeout(async () => {
+      setIsSearchingMembers(true);
+
+      try {
+        const response = await fetch(
+          `/api/users/search?q=${encodeURIComponent(query)}`,
+          { signal: controller.signal },
+        );
+
+        if (!response.ok) {
+          throw new Error("Unable to search users.");
+        }
+
+        const data = (await response.json()) as {
+          users?: SearchUser[];
+        };
+
+        if (controller.signal.aborted) return;
+
+        const existingMemberIds = new Set(
+          conversation.participants.map((participant) => participant.id),
+        );
+
+        setSearchResults(
+          (data.users ?? []).filter(
+            (user) =>
+              !existingMemberIds.has(user.id) &&
+              !selectedMembers.some(
+                (selected) => selected.id === user.id,
+              ),
+          ),
+        );
+      } catch (error) {
+        if (error instanceof Error && error.name !== "AbortError") {
+          console.error("Group member search failed:", error);
+          setSearchResults([]);
+        }
+      } finally {
+        if (!controller.signal.aborted) {
+          setIsSearchingMembers(false);
+        }
+      }
+    }, 300);
+
+    return () => {
+      clearTimeout(timeout);
+      controller.abort();
+    };
+  }, [
+    memberSearch,
+    showGroupDetails,
+    conversation,
+    isCurrentUserAdmin,
+    selectedMembers,
+  ]);
 
   // Mark the conversation as read when it opens or a new message arrives.
   const latestMessageId = messages[messages.length - 1]?.id;
@@ -407,6 +518,11 @@ const SingleMessage = ({
       }
     };
   }, [mediaPreview]);
+
+  const handleEmojiSelect = (emoji: string) => {
+    handleContentChange(content + emoji);
+    messageInputRef.current?.focus();
+  };
 
   // Stop the typing indicator and clear its timeout.
   const stopTyping = () => {
@@ -642,6 +758,62 @@ const SingleMessage = ({
     setReplyingTo(null);
   };
 
+  // Select or deselect a user to add to the group.
+  const handleToggleMember = (user: SearchUser) => {
+    setSelectedMembers((previous) => {
+      const alreadySelected = previous.some(
+        (member) => member.id === user.id,
+      );
+
+      if (alreadySelected) {
+        return previous.filter((member) => member.id !== user.id);
+      }
+
+      return [...previous, user];
+    });
+  };
+
+  // Add selected users to the group.
+  const handleAddMembers = async () => {
+    if (
+      !conversation?.isGroup ||
+      !isCurrentUserAdmin ||
+      selectedMembers.length === 0 ||
+      isAddingMembers
+    ) {
+      return;
+    }
+
+    setIsAddingMembers(true);
+
+    try {
+      const result = await addGroupMembers(
+        conversation.id,
+        selectedMembers.map((member) => member.id),
+      );
+
+      if (!result.success) {
+        alert(result.error || "Unable to add group members.");
+        return;
+      }
+
+      alert(
+        `${result.addedCount} member${result.addedCount === 1 ? "" : "s"} added successfully.`,
+      );
+
+      setSelectedMembers([]);
+      setMemberSearch("");
+      setSearchResults([]);
+
+      router.refresh();
+    } catch (error) {
+      console.error("Failed to add group members:", error);
+      alert("Something went wrong while adding group members.");
+    } finally {
+      setIsAddingMembers(false);
+    }
+  };
+
   // Jump to the original message from a quoted preview.
   const handleJumpToMessage = (messageId: string) => {
     const originalElement = document.getElementById(
@@ -863,7 +1035,7 @@ const SingleMessage = ({
   };
 
   return (
-    <div className="w-1/2 flex-col h-full hidden lg:flex">
+    <div className="w-1/2 flex-col h-full hidden lg:flex relative">
       {/* Messages Header */}
       <div className="flex items-center justify-between p-4 border-b border-foreground">
         <div className="flex items-center min-w-0">
@@ -902,6 +1074,8 @@ const SingleMessage = ({
 
             {conversation.isGroup && (
               <p className="text-xs text-foreground/60">
+                {conversation.participants.length} members
+                {" · "}
                 {
                   Object.values(presence).filter(
                     (user) =>
@@ -928,9 +1102,198 @@ const SingleMessage = ({
         <div className="flex gap-4 items-center shrink-0">
           <Phone size={20} />
           <Video size={20} />
-          <EllipsisVertical size={20} />
+
+          {conversation.isGroup && (
+            <button
+              type="button"
+              onClick={() =>
+                setShowGroupDetails((previous) => !previous)
+              }
+              className="cursor-pointer hover:opacity-60"
+              title="Group details"
+              aria-label="Toggle group details"
+              aria-expanded={showGroupDetails}
+            >
+              <EllipsisVertical size={20} />
+            </button>
+          )}
         </div>
       </div>
+
+      {conversation.isGroup && showGroupDetails && (
+        <div className="absolute top-20 right-4 z-30 w-80 max-w-[calc(100%-2rem)] rounded-xl border border-foreground/20 bg-background shadow-xl">
+          <div className="flex items-center justify-between p-4 border-b border-foreground/10">
+            <div className="min-w-0">
+              <p className="font-semibold truncate">
+                {conversation.name || "Group conversation"}
+              </p>
+
+              <p className="text-xs text-foreground/60">
+                {conversation.participants.length} members
+              </p>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setShowGroupDetails(false)}
+              className="p-1 rounded-full hover:bg-foreground/10"
+              title="Close group details"
+            >
+              <X size={18} />
+            </button>
+          </div>
+
+          <div className="p-4">
+            {isCurrentUserAdmin && (
+              <div className="mb-5">
+                <p className="text-sm font-semibold mb-3">
+                  Add members
+                </p>
+
+                <input
+                  type="text"
+                  value={memberSearch}
+                  onChange={(event) => setMemberSearch(event.target.value)}
+                  placeholder="Search by username..."
+                  disabled={isAddingMembers}
+                  className="w-full p-2 text-sm rounded-lg border border-foreground/20 bg-background text-foreground focus:outline-none focus:border-foreground"
+                />
+
+                {selectedMembers.length > 0 && (
+                  <div className="flex flex-wrap gap-2 mt-3">
+                    {selectedMembers.map((member) => (
+                      <span
+                        key={member.id}
+                        className="flex items-center gap-2 text-xs px-2 py-1 rounded-full bg-foreground/10"
+                      >
+                        @{member.username}
+
+                        <button
+                          type="button"
+                          onClick={() => handleToggleMember(member)}
+                          disabled={isAddingMembers}
+                          className="hover:opacity-60 disabled:opacity-40"
+                          title={`Remove ${member.username} from selection`}
+                        >
+                          <X size={12} />
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                )}
+
+                {memberSearch.trim() && (
+                  <div className="mt-2 max-h-40 overflow-y-auto flex flex-col gap-2">
+                    {isSearchingMembers ? (
+                      <p className="text-xs text-foreground/50 py-2">
+                        Searching...
+                      </p>
+                    ) : searchResults.length > 0 ? (
+                      searchResults.map((user) => (
+                        <button
+                          key={user.id}
+                          type="button"
+                          onClick={() => handleToggleMember(user)}
+                          disabled={isAddingMembers}
+                          className="flex items-center gap-3 p-2 rounded-lg text-left hover:bg-foreground/10 transition-colors disabled:opacity-50"
+                        >
+                          <div className="w-8 h-8 shrink-0 rounded-full bg-foreground/10 flex items-center justify-center text-xs font-semibold">
+                            {(user.displayName || user.username)
+                              .charAt(0)
+                              .toUpperCase()}
+                          </div>
+
+                          <div className="min-w-0">
+                            <p className="text-sm font-medium truncate">
+                              {user.displayName || user.username}
+                            </p>
+
+                            <p className="text-xs text-foreground/50 truncate">
+                              @{user.username}
+                            </p>
+                          </div>
+                        </button>
+                      ))
+                    ) : (
+                      <p className="text-xs text-foreground/50 py-2">
+                        No available users found.
+                      </p>
+                    )}
+                  </div>
+                )}
+
+                <button
+                  type="button"
+                  onClick={handleAddMembers}
+                  disabled={
+                    selectedMembers.length === 0 ||
+                    isAddingMembers
+                  }
+                  className="w-full mt-3 p-2 rounded-lg bg-foreground text-background text-sm font-medium hover:opacity-80 disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  {isAddingMembers
+                    ? "Adding members..."
+                    : `Add ${selectedMembers.length > 0 ? selectedMembers.length : ""} ${selectedMembers.length === 1 ? "member" : "members"}`}
+                </button>
+              </div>
+            )}
+
+            <p className="text-sm font-semibold mb-3">
+              Group members
+            </p>
+
+            <div className="max-h-72 overflow-y-auto flex flex-col gap-3">
+              {conversation.participants.map((participant) => {
+                const participantName =
+                  participant.displayName ||
+                  participant.username ||
+                  "Unknown user";
+
+                const isCurrentUser =
+                  participant.id === conversation.currentUserId;
+
+                return (
+                  <div
+                    key={participant.id}
+                    className="flex items-center gap-3 min-w-0"
+                  >
+                    <div className="w-9 h-9 shrink-0 rounded-full bg-foreground/10 flex items-center justify-center text-sm font-semibold">
+                      {participantName.charAt(0).toUpperCase()}
+                    </div>
+
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <p className="text-sm font-medium truncate">
+                          {participantName}
+                          {isCurrentUser && (
+                            <span className="text-xs text-foreground/50 ml-2">
+                              You
+                            </span>
+                          )}
+                        </p>
+
+                        {participant.role === "ADMIN" && (
+                          <span className="text-[10px] px-2 py-0.5 rounded-full bg-foreground/10 shrink-0">
+                            Admin
+                          </span>
+                        )}
+                      </div>
+
+                      <p className="text-xs text-foreground/50 truncate">
+                        @{participant.username}
+                      </p>
+                    </div>
+
+                    {presence[participant.id]?.isOnline && (
+                      <span className="w-2 h-2 rounded-full bg-green-500 shrink-0" />
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Messages Body */}
       <div className="flex-1 min-h-0 overflow-y-auto p-4 flex flex-col gap-4">
@@ -967,6 +1330,13 @@ const SingleMessage = ({
                       : "bg-foreground/10 rounded-tl-none"
                   }`}
                 >
+                  {conversation.isGroup && !isOutgoing && (
+                    <p className="text-xs font-semibold mb-2 opacity-70">
+                      {message.sender.displayName ||
+                        message.sender.username ||
+                        "Unknown user"}
+                    </p>
+                  )}
                   {/* Quoted original message */}
                   {message.replyTo && (
                     <button
@@ -1222,6 +1592,11 @@ const SingleMessage = ({
         >
           <ImagePlus size={22} />
         </button>
+
+        <EmojiPicker
+          onSelect={handleEmojiSelect}
+          disabled={isSending}
+        />
 
         <input
           ref={messageInputRef}
